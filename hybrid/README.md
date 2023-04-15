@@ -2,7 +2,14 @@ Code was written following Blackburn 1998, present in this repository as **black
 
 **Table of Contents**
 
-[TOC]
+- [What was done](#what-was-done)
+- [What needs work](#what-needs-work)
+  * [1. Substitution lemma](#1-substitution-lemma)
+  * [2. Propositional tautologies](#2-propositional-tautologies)
+  * [3. Soundness for the remaining axioms](#3-soundness-for-the-remaining-axioms)
+  * [4. Proving decidability](#4-proving-decidability)
+  * [5. Completeness...](#5-completeness)
+- [In addition...](#in-addition)
 
 ### What was done
 1. Defined the basics of hybrid language (specifically the language L(∀) as per Blackburn 1998): **Form.lean**. Proved some basics facts about substitutions and boundness.

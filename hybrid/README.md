@@ -4,7 +4,7 @@ Code was written following Blackburn 1998, present in this repository as **black
 
 - [What was done](#what-was-done)
 - [What needs work](#what-needs-work)
-  * [1. Soundness for tautologies & deduction rules](#1-soundness-for-tautologies-deduction-rules)
+  * [1. Soundness for tautologies & deduction rules](#1-soundness-for-tautologies--deduction-rules)
   * [2. Propositional tautologies](#2-propositional-tautologies)
   * [3. Completeness...](#5-completeness)
 - [In addition...](#in-addition)

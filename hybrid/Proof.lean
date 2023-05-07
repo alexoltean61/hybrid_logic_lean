@@ -1,45 +1,5 @@
 import Hybrid.Form
 
-section Tautology
-/-
-  def morphism_false {α : Type} (f : Form → set α) : Prop := ∀ a : α, (a ∈ f ⊥) → False 
-  def morphism_impl  {α : Type} (f : Form → set α) : Prop := ∀ (a : α) (φ ψ : Form), (a ∈ f (φ ⟶ ψ)) ↔ ((a ∈ f φ) → (a ∈ f ψ))
-  def Morphism {α : Type} (f : Form → set α) : Prop := (morphism_false f) ∧ (morphism_impl f)
-  def Tautology (φ : Form) : Prop := ∀ {α : Type} (f : Form → set α) (_ : Morphism f) (a : α), a ∈ f φ
-  
-  theorem test {φ ψ : Form} : Tautology (φ ⟶ (ψ ⟶ φ)) := by
-    intro α f ⟨_, impl⟩ a
-    rw [impl, impl]
-    intro h _
-    exact h
--/
-
-  class Morphism {α : Type} (f : Form → set α) where
-    morph_false : ∀ a : α, (a ∈ f ⊥) ↔ False
-    morph_impl  : ∀ (a : α) (φ ψ : Form), (a ∈ f (φ ⟶ ψ)) ↔ ((a ∈ f φ) → (a ∈ f ψ))
-
-  attribute [simp] Morphism.morph_false
-  attribute [simp] Morphism.morph_impl
-  @[simp]
-  def morph_neg {α : Type} (a : α) (f : Form → set α) [m : Morphism f] {φ : Form} : (a ∈ f (∼φ)) ↔ ((a ∈ f φ) → False) := by
-    simp
-  @[simp]
-  def morph_conj {α : Type} (a : α) (f : Form → set α) [m : Morphism f] {φ ψ : Form} : (a ∈ f (φ ⋀ ψ)) ↔ ((a ∈ f φ) ∧ (a ∈ f ψ)) := by
-    simp
-  @[simp]
-  def morph_disj {α : Type} (a : α) (f : Form → set α) [m : Morphism f] {φ ψ : Form} : (a ∈ f (φ ⋁ ψ)) ↔ ((a ∈ f φ) ∨ (a ∈ f ψ)) := by
-    simp
-
-  def Tautology (φ : Form) : Prop := ∀ {α : Type} (f : Form → set α) [Morphism f] (a : α), a ∈ f φ
-
-  theorem test {φ ψ : Form} : Tautology (φ ⟶ (ψ ⟶ φ)) := by
-    intro α f m a
-    rw [m.morph_impl, m.morph_impl]
-    intro h _
-    exact h
-
-end Tautology
-
 inductive Proof : set Form → Form → Type where
   -- Deduction rules:
   -- all premises (elements of Γ) can be deduced from Γ
@@ -62,8 +22,12 @@ inductive Proof : set Form → Form → Type where
         Proof Γ (φ ⟶ ψ) → Proof Γ φ → Proof Γ ψ
 
   -- add all instances of propositional tautologies...
-  | tautology {Γ : set Form} {φ : Form}:
-        Tautology φ → Proof Γ φ
+  | tautology₁ {Γ : set Form} {φ ψ : Form}:
+        Proof Γ (φ ⟶ (ψ ⟶ φ))
+  | tautology₂ {Γ : set Form} {φ ψ χ : Form}:
+        Proof Γ ((φ ⟶ (ψ ⟶ χ)) ⟶ ((φ ⟶ ψ) ⟶ (φ ⟶ χ))) 
+  | tautology₃ {Γ : set Form} {φ ψ : Form}:
+        Proof Γ ((∼φ ⟶ ∼ψ) ⟶ (ψ ⟶ φ))
 
   -- Axioms for modal + hybrid logic:
   -- distribution schema (axiom K)

@@ -327,7 +327,25 @@ end Lemmas
 
 theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
   intro pf
-  induction pf with 
+  induction pf with
+
+  | tautology₁ =>
+      intro _ _ _ _ phi _
+      exact phi
+
+  | tautology₂ =>
+      intro _ _ _ _ h1 h2 h3
+      exact (h1 h3) (h2 h3)
+
+  | tautology₃ =>
+      intro _ _ _ _ h1 h2
+      rw [Sat, neg_sat, implication_disjunction, double_negation] at h1
+      apply Or.elim h1
+      . intro
+        assumption
+      . intro h3
+        exact False.elim (h3 h2)
+
   | @ax_k Γ =>
       rw [Entails]
       intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
@@ -422,8 +440,6 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
       -- exact ih ∅ M s' g p
       have := ih Γ
       admit
-
-  | tautology => admit
 
   | ponens _ _ ih_maj ih_min =>
       intro M M_sat_Γ s g

@@ -32,29 +32,6 @@ section Basics
   deriving Repr
 
   @[simp]
-  def Form.size : Form → Nat :=
-    λ φ => 
-      match φ with
-      | impl ψ χ => ψ.size + χ.size + 1
-      | box  ψ   => ψ.size + 1
-      | bind _ ψ => ψ.size + 1
-      | _        => 1
-
-  instance : SizeOf Form where
-    sizeOf := Form.size
-
-  theorem impl_size₁ {φ ψ : Form} : φ.size < (Form.impl φ ψ).size := by simp_arith
-  theorem impl_size₂ {φ ψ : Form} : ψ.size < (Form.impl φ ψ).size := by simp_arith
-  theorem box_size {φ : Form} : φ.size < (Form.box φ).size := by simp_arith
-  theorem bind_size {x : SVAR} {φ : Form} : φ.size < (Form.bind x φ).size := by simp_arith
-
-
-  def Form.less : Form → Form → Prop := λ φ => λ ψ => φ.size < ψ.size
-  instance : LT Form where
-    lt := Form.less
-
-
-  @[simp]
   def Form.neg      : Form → Form := λ φ => Form.impl φ Form.bttm
   @[simp]
   def Form.conj     : Form → Form → Form := λ φ => λ ψ => Form.neg (Form.impl φ (Form.neg ψ))
@@ -80,6 +57,34 @@ section Basics
   notation "⊥"  => Form.bttm
 end Basics
 
+section Variables
+  instance : LT SVAR where
+    lt := λ x y => x.letter < y.letter  
+  instance : HAdd SVAR Nat SVAR where
+    hAdd := λ v n => { letter := v.letter + n }
+  instance : HAdd Nat SVAR SVAR where
+    hAdd := λ n v => { letter := v.letter + n }
+  instance (x y : SVAR) : Decidable (x < y) :=
+      dite (x.letter < y.letter) (λ tr => isTrue tr) (λ fls => isFalse fls)
+
+  def max_svar (l : List SVAR) : SVAR :=
+    match l with
+      | []     => {letter := (default : Nat)}
+      | h :: t => max h (max_svar t)
+  
+  def list_vars (φ : Form) : List SVAR :=
+    match φ with
+    | Form.svar x   => [x]
+    | Form.impl φ ψ => (list_vars φ) ++ (list_vars ψ)
+    | Form.box φ    => list_vars φ
+    | Form.bind _ φ => list_vars φ
+    | _             => []
+
+  def occurs (x : SVAR) (φ : Form) : Bool := (list_vars φ).contains x
+
+  def get_fresh_var (φ : Form) : SVAR := {letter := (max_svar (list_vars φ)).letter + 1}
+end Variables
+
 section Substitutions
   def is_free (x : SVAR) (φ : Form) : Prop :=
     match φ with
@@ -91,20 +96,57 @@ section Substitutions
     | Form.box  φ   => is_free x φ
     | Form.bind y φ => ite (y = x) False (is_free x φ)
 
-  instance : Decidable (is_free x φ) :=
+  instance DecidableIsFree : Decidable (is_free x φ) := by
     match φ with
-    | Form.bttm     => isTrue trivial
-    | Form.prop _   => isTrue trivial
-    | Form.svar _   => isTrue trivial
-    | Form.nom  _   => isTrue trivial
-    | Form.impl φ ψ => sorry
-    | Form.box  φ   => sorry
-    | Form.bind y φ => sorry
+    | Form.bttm     => exact isTrue trivial
+    | Form.prop _   => exact isTrue trivial
+    | Form.svar _   => exact isTrue trivial
+    | Form.nom  _   => exact isTrue trivial
+    | Form.box  φ   => exact (@DecidableIsFree x φ)
+    | Form.impl φ ψ =>
+        have ih_1 := @DecidableIsFree x φ
+        have ih_2 := @DecidableIsFree x ψ
+        match ih_1 with
+        | isTrue p  => exact isTrue (Or.inl p)
+        | isFalse p =>
+            match ih_2 with
+            | isTrue  q => exact isTrue (Or.inr q)
+            | isFalse q => exact isFalse (negated_disjunction.mpr ⟨p, q⟩)
+    | Form.bind y φ =>
+        have ih := @DecidableIsFree x φ
+        match ih with
+        | isTrue p =>
+            exact dite (y = x) (λ eq =>
+                    isFalse (show ¬is_free x (all y, φ) by
+                      intro t
+                      unfold is_free at t
+                      rw [if_pos eq] at t
+                      exact t)
+                    )
+                  (λ neq =>
+                    isTrue (show is_free x (all y, φ) by
+                      unfold is_free
+                      rw [if_neg neq]
+                      assumption)
+                    )
+        | isFalse p =>
+            exact dite (y = x) (λ eq =>
+                    isFalse (show ¬is_free x (all y, φ) by
+                      intro t
+                      unfold is_free at t
+                      rw [if_pos eq] at t
+                      exact t)
+                    )
+                  (λ neq =>
+                    isFalse (show ¬is_free x (all y, φ) by
+                      unfold is_free
+                      rw [if_neg neq]
+                      assumption)
+                    )
 
   -- conventions for substitutions can get confusing
   -- "φ[s // x], the formula obtained by substituting s for all *free* occurrences of x in φ"
   -- for reference: Blackburn 1998, pg. 628
-
   def subst_svar (φ : Form) (s : SVAR) (x : SVAR) : Form :=
     match φ with
     | Form.bttm     => φ
@@ -205,3 +247,59 @@ section Substitutions
     simp [is_free] at h
 
 end Substitutions
+
+section IteratedModalities
+
+  -- Axiom utils. Since we won't be assuming a transitive frame,
+  -- it will make sense to be able to construct formulas with
+  -- iterated modal operators at their beginning (ex., for axiom nom)
+  def iterate_nec (n : Nat) (φ : Form) : Form :=
+    let rec loop : Nat → Form → Form
+      | 0, φ   => φ
+      | n+1, φ => □ (loop n φ)
+    loop n φ
+
+  theorem iter_nec_one : □ φ = iterate_nec 1 φ := by
+    rw [iterate_nec, iterate_nec.loop, iterate_nec.loop]
+
+  theorem iter_nec_one_m_comm : iterate_nec 1 (iterate_nec m φ) = iterate_nec m (iterate_nec 1 φ) := by
+    induction m with
+    | zero =>
+        simp [iterate_nec, iterate_nec.loop]
+    | succ n ih =>
+        simp [iterate_nec, iterate_nec.loop]
+        exact ih
+
+  theorem iter_nec_compose : iterate_nec (m + 1) φ = iterate_nec m (iterate_nec 1 φ) := by
+    rw [iterate_nec, iterate_nec.loop, iter_nec_one, ←iterate_nec, iter_nec_one_m_comm]
+
+  theorem iter_nec_succ : iterate_nec (m + 1) φ = iterate_nec m (□ φ) := by
+    rw [iter_nec_one, iter_nec_compose]
+
+
+
+  def iterate_pos (n : Nat) (φ : Form) : Form :=
+    let rec loop : Nat → Form → Form
+      | 0, φ   => φ
+      | n+1, φ => ◇ (loop n φ)
+    loop n φ
+
+  theorem iter_pos_one : ◇ φ = iterate_pos 1 φ := by
+    rw [iterate_pos, iterate_pos.loop, iterate_pos.loop]
+
+  theorem iter_pos_one_m_comm : iterate_pos 1 (iterate_pos m φ) = iterate_pos m (iterate_pos 1 φ) := by
+    induction m with
+    | zero =>
+        simp [iterate_pos, iterate_pos.loop]
+    | succ n ih =>
+        simp [iterate_pos, iterate_pos.loop]
+        exact ih
+
+  theorem iter_pos_compose : iterate_pos (m + 1) φ = iterate_pos m (iterate_pos 1 φ) := by
+    rw [iterate_pos, iterate_pos.loop, iter_pos_one, ←iterate_pos, iter_pos_one_m_comm]
+
+  theorem iter_pos_succ : iterate_pos (m + 1) φ = iterate_pos m (◇ φ) := by
+    rw [iter_pos_one, iter_pos_compose]
+
+
+end IteratedModalities

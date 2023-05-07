@@ -11,6 +11,14 @@ structure Model where
 -- from any state variable, to exactly ONE world
 def I (W : Type) := SVAR → W
 
+-- let's define what it means to have a path between two elements
+-- under a relation R
+-- we will need this in proofs
+def path {α : Type} (R : α → α → Prop) (a b : α) (n : Nat) : Prop :=
+  match n with
+  | Nat.zero   => a = b
+  | Nat.succ m => ∃ i : α, (R i b) ∧ (path R a i m)
+
 @[simp]
 def is_variant (g₁ : I W) (g₂ : I W) (x : SVAR) := ∀ y : SVAR, ((x ≠ y) → (g₁ y = g₂ y))
 
@@ -98,6 +106,42 @@ def Sat (M : Model) (s : M.W) (g : I M.W) : (φ : Form) → Prop
 notation "(" M "," s "," g ")" "⊨" φ => Sat M s g φ
 notation "(" M "," s "," g ")" "⊭" φ => ¬ Sat M s g φ
 
+@[simp]
+def Models (M : Model) (φ : Form) := ∀ (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
+
+infix:1000 "⊨" => Models
+infix:1000 "⊭" => ¬ Models
+
+@[simp]
+def Valid (φ : Form) := ∀ (M : Model), (M ⊨ φ)
+
+prefix:1000 "⊨" => Valid
+prefix:1000 "⊭" => ¬ Valid
+
+@[simp]
+def Sat_Set (M : Model) (s : M.W) (g : I M.W) (Γ : set Form) := ∀ (φ : Form), (φ ∈ Γ) → ((M, s, g) ⊨ φ)
+
+notation "(" M "," s "," g ")" "⊨" Γ => Sat_Set M s g Γ
+notation "(" M "," s "," g ")" "⊭" Γ => ¬ Sat_Set M s g Γ
+
+@[simp]
+def Entails (Γ : set Form) (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ) 
+--def Entails (Γ : set Form) (φ : Form) := ∀ M : Model, (M ⊨ Γ) → (M ⊨ φ) 
+
+infix:1000 "⊨" => Entails
+infix:1000 "⊭" => ¬ Entails
+
+theorem neg_sat {φ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ ∼φ) ↔ ((M,s,g) ⊭ φ) := by
+  simp
+theorem and_sat {φ ψ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ φ ⋀ ψ) ↔ (((M,s,g) ⊨ φ) ∧ (M,s,g) ⊨ ψ) := by
+  simp
+theorem or_sat  {φ ψ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ φ ⋁ ψ) ↔ (((M,s,g) ⊨ φ) ∨ (M,s,g) ⊨ ψ) := by
+  simp
+theorem pos_sat {φ : Form} {M : Model} {s : M.W} {g : I M.W} : (((M,s,g) ⊨ ◇φ) ↔ (∃ s' : M.W, (M.R s s' ∧ (M,s',g) ⊨ φ))) := by
+  simp
+theorem ex_sat  {x : SVAR} {φ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ ex x, φ) ↔ (∃ g' : I M.W, (is_variant g' g x) ∧ ((M,s,g') ⊨ φ)) := by
+  simp [-is_variant]
+
 theorem bind_comm {M : Model} {s : M.W} {g : I M.W} {φ : Form} {x y : SVAR} : ((M,s,g) ⊨ all x, (all y, φ)) ↔ ((M,s,g) ⊨ all y, (all x, φ)) := by
   apply Iff.intro
   . intro h1
@@ -117,37 +161,49 @@ theorem bind_comm {M : Model} {s : M.W} {g : I M.W} {φ : Form} {x y : SVAR} : (
       have mid_g_sat := h2 mid_g (is_variant_symm.mp mid_g_var_g)
       exact mid_g_sat i (is_variant_symm.mp mid_g_var_i)
 
-@[simp]
-def Models (M : Model) (φ : Form) := ∀ (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
 
-infix:1000 "⊨" => Models
-infix:1000 "⊭" => ¬ Models
 
-@[simp]
-def Valid (φ : Form) := ∀ (M : Model), (M ⊨ φ)
-
-prefix:1000 "⊨" => Valid
-prefix:1000 "⊭" => ¬ Valid
-
-@[simp]
-def Models_Set (M : Model) (Γ : set Form) := ∀ (s : M.W) (g : I M.W) (φ : Form), (φ ∈ Γ) → ((M, s, g) ⊨ φ)
-
-infix:1000 "⊨" => Models_Set
-infix:1000 "⊭" => ¬ Models_Set
-
-@[simp]
-def Entails (Γ : set Form) (φ : Form) := ∀ M : Model, (M ⊨ Γ) → (M ⊨ φ) 
-
-infix:1000 "⊨" => Entails
-infix:1000 "⊭" => ¬ Entails
-
-theorem neg_sat {φ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ ∼φ) ↔ ((M,s,g) ⊭ φ) := by
+/-
+theorem mpd {M : Model} {s : M.W} {g : I M.W} {φ ψ : Form} : ((M,s,g) ⊨ (φ ⟶ ψ)) ↔ (((M,s,g) ⊨ φ) → ((M,s,g) ⊨ ψ)) := by
   simp
-theorem and_sat {φ ψ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ φ ⋀ ψ) ↔ (((M,s,g) ⊨ φ) ∧ (M,s,g) ⊨ ψ) := by
-  simp
-theorem or_sat  {φ ψ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ φ ⋁ ψ) ↔ (((M,s,g) ⊨ φ) ∨ (M,s,g) ⊨ ψ) := by
-  simp
-theorem pos_sat {φ : Form} {M : Model} {s : M.W} {g : I M.W} : (((M,s,g) ⊨ ◇φ) ↔ (∃ s' : M.W, (M.R s s' ∧ (M,s',g) ⊨ φ))) := by
-  simp
-theorem ex_sat  {x : SVAR} {φ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ ex x, φ) ↔ (∃ g' : I M.W, (is_variant g' g x) ∧ ((M,s,g') ⊨ φ)) := by
-  simp [-is_variant]
+
+theorem mp {Γ : set Form} {φ ψ : Form} : (Γ ⊨ (φ ⟶ ψ)) ↔ ((Γ ⊨ φ) → (Γ ⊨ ψ)) := by
+  apply Iff.intro
+  . intro ih_maj ih_min
+    rw [Entails]
+    rw [Entails] at ih_min
+    rw [Entails] at ih_maj
+    intro M M_sat_Γ s g
+    exact (ih_maj M M_sat_Γ s g) (ih_min M M_sat_Γ s g)
+  . intro h
+    rw [Entails]
+    rw [Entails, Entails] at h
+    intro M M_sat_Γ s g
+    --have := h M M_sat_Γ s g
+    admit
+
+theorem t {v : SVAR} {Γ : set Form} : (v ∈ Γ) → (Γ ⊨ (all v, v)) := by
+  intro pv
+  intro M M_sat_Γ s g g' _
+  have := M_sat_Γ s g' v pv
+  exact this
+
+theorem t2 {v : SVAR} {Γ : set Form} : (Γ ⊨ v) → (Γ ⊨ (all v, v)) := by
+  intro pv
+  intro _ _ _ _ _ _
+  apply pv
+  assumption
+
+theorem wtf {v : SVAR} {Γ : set Form} : (Γ ⊨ (v ⟶ all v, v)) := by
+  rw [mp] -- mp is not provable!
+  intro h _ _ _ _ _ _
+  apply h
+  assumption
+
+theorem t3 {v : SVAR} {M : Model} : (M ⊨ (v ⟶ all v, v)) := by
+  intro s g pv
+  intro g' _
+  rw [Sat] at pv
+  rw [Sat]
+  admit
+-/

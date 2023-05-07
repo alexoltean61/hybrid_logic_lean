@@ -63,7 +63,7 @@ section Lemmas
   theorem svar_substitution {φ : Form} {x y : SVAR} {M : Model} {s : M.W} {g g' : I M.W} 
   (h_subst : is_substable φ y x) (h_var : is_variant g g' x) (h_which_var : g' x = g y) :
   (((M,s,g) ⊨ φ[y // x]) ↔ (M,s,g') ⊨ φ) := by
-    induction φ with
+    induction φ generalizing s g g' with
     | svar z   =>
         apply Iff.intro
         . intro h
@@ -83,21 +83,21 @@ section Lemmas
             rw [Sat, ←(h_var z (Ne.symm z_x))] at h
             exact h
     | impl ψ χ ind_hyp_1 ind_hyp_2 =>
-        have by_ind_hyp_1 := ind_hyp_1 h_subst.left
-        have by_ind_hyp_2 := ind_hyp_2 h_subst.right
+        have by_ind_hyp_1 := (@ind_hyp_1 s g) h_subst.left h_var h_which_var
+        have by_ind_hyp_2 := (@ind_hyp_2 s g) h_subst.right h_var h_which_var
         apply Iff.intro
         . simp [-implication_disjunction]
           intro h1 h2
           exact by_ind_hyp_2.mp (h1 (by_ind_hyp_1.mpr h2))
         . intro h1 h2
           exact by_ind_hyp_2.mpr (h1 (by_ind_hyp_1.mp h2))
-    | box  ψ _                    =>
+    | box  ψ ind_hyp                   =>
         apply Iff.intro
         . intro h1 s' s_R_s'
-          have by_ind_hyp := @svar_substitution ψ x y M s' g g' h_subst h_var h_which_var
+          have by_ind_hyp := (@ind_hyp s' g) h_subst h_var h_which_var
           exact by_ind_hyp.mp (h1 s' s_R_s')
         . intro h1 s' s_R_s'
-          have by_ind_hyp := @svar_substitution ψ x y M s' g g' h_subst h_var h_which_var
+          have by_ind_hyp := (@ind_hyp s' g) h_subst h_var h_which_var
           exact by_ind_hyp.mpr (h1 s' s_R_s')
     | bind v ψ ind_hyp =>
         by_cases x_free : is_free x ψ
@@ -114,14 +114,17 @@ section Lemmas
               rw [←x_v] at h1
               rw [←x_v] at x_bound
               exact (generalize_bound x_bound h1) g h_var
-          . -- all v, ψ   (v ≠ x)   and       x is free in ψ
-            by_cases y_v : y = v
-            . unfold is_substable at h_subst
+          . by_cases y_v : y = v
+            . -- all y, ψ          and       x is free in ψ
+              unfold is_substable at h_subst
               rw [if_neg (double_negation.mpr x_free), if_neg (double_negation.mpr y_v)] at h_subst
               exact False.elim h_subst
-            . -- simplify h_subst to is_substable ψ y x
+            . --  all v, ψ  (v ≠ x and v ≠ y) and x is free in ψ
+              --
+              -- simplify h_subst to is_substable ψ y x :
               unfold is_substable at h_subst
               rw [if_neg (double_negation.mpr x_free), if_pos y_v] at h_subst
+              -- proof:
               apply Iff.intro
               . intro h1
                 -- step one: turn
@@ -147,7 +150,7 @@ section Lemmas
                       rw [show f' x = g' x from f'_var_g'_v x (Ne.symm (Ne.intro x_v))]
                       assumption
                     have t2 : (M,s,f) ⊨ ψ[y//x] := h1 f (is_variant_symm.mpr f_var_g_v)
-                    exact (@svar_substitution ψ x y M s f f' h_subst f_var_f'_x t1).mp t2
+                    exact (@ind_hyp s f f' h_subst f_var_f'_x t1).mp t2
               . intro h1
                 -- do the same thing backwards, basically
                 unfold subst_svar
@@ -161,7 +164,7 @@ section Lemmas
                       rw [show f' x = g' x from f'_var_g'_v x (Ne.symm (Ne.intro x_v))]
                       assumption
                   have t2 : (M,s,f') ⊨ ψ := h1 f' f'_var_g'_v
-                  exact (@svar_substitution ψ x y M s f f' h_subst f_var_f'_x t1).mpr t2
+                  exact (@ind_hyp s f f' h_subst f_var_f'_x t1).mpr t2
         . have x_bound : ¬is_free x (all v, ψ) := preserve_boundness x_free
           apply Iff.intro
           . intro h2 g'' v_variant
@@ -171,37 +174,173 @@ section Lemmas
             conv => rhs ; rw [subst_bound_var x_bound]
             exact (generalize_bound x_bound h2) g h_var
     | _        => simp
-    termination_by svar_substitution φ _ _ _ _ _ _ _ _ _ => φ
-    decreasing_by sorry
+
+    theorem nom_substitution {φ : Form} {x : SVAR} {i : NOM} {M : Model} {s : M.W} {g g' : I M.W}
+    (h_var : is_variant g g' x) (h_which_var : g' x = M.Vₙ i) :
+    (((M,s,g) ⊨ φ[i // x]) ↔ ((M,s,g') ⊨ φ)) := by
+      induction φ generalizing s g g' with
+      | svar y =>
+          by_cases x_y : x = y
+          . apply Iff.intro
+            . intro h1
+              rw [subst_nom, if_pos x_y] at h1
+              rw [Sat, ←x_y, h_which_var]
+              exact h1
+            . intro h2
+              rw [Sat, ←x_y, h_which_var] at h2
+              rw [subst_nom, if_pos x_y]
+              exact h2
+          . apply Iff.intro
+            . intro h1
+              rw [subst_nom, if_neg x_y] at h1
+              rw [Sat, ←(h_var y x_y)]
+              exact h1
+            . intro h2
+              rw [subst_nom, if_neg x_y]
+              rw [Sat, ←(h_var y x_y)] at h2
+              exact h2
+      | impl ψ χ ih_1 ih_2 =>
+          have ih_1 := @ih_1 s g g' h_var h_which_var
+          have ih_2 := @ih_2 s g g' h_var h_which_var
+          conv => lhs rhs rw[subst_nom]
+          apply Iff.intro
+          . intro h1 antecedent
+            exact ih_2.mp (h1 (ih_1.mpr antecedent))
+          . intro h2 antecedent
+            exact ih_2.mpr (h2 (ih_1.mp antecedent))
+      | box ψ ih =>
+          conv => lhs rhs rw[subst_nom]
+          apply Iff.intro
+          . intro h1 s' s_R_s'
+            have ih := @ih s' g g' h_var h_which_var
+            exact ih.mp (h1 s' s_R_s')
+          . intro h2 s' s_R_s'
+            have ih := @ih s' g g' h_var h_which_var
+            exact ih.mpr (h2 s' s_R_s')
+      | bind y ψ ih =>
+          conv => lhs rhs rw[subst_nom]
+          by_cases x_y : x = y
+          . rw [if_pos x_y]
+            apply Iff.intro
+            . intro h1
+              intro f f_var_g'_y
+              rw [←x_y, is_variant_symm] at f_var_g'_y
+              have f_var_g_x := is_variant_trans h_var f_var_g'_y
+              rw [x_y] at f_var_g_x
+              exact h1 f (is_variant_symm.mp f_var_g_x)
+            . intro h2
+              intro f f_var_g_y
+              rw [←x_y, is_variant_symm] at f_var_g_y
+              have f_var_g'_x := is_variant_trans (is_variant_symm.mp f_var_g_y) h_var
+              rw [x_y] at f_var_g'_x
+              exact h2 f f_var_g'_x
+          . rw [if_neg x_y]
+            apply Iff.intro
+            . intro h1
+              intro f' f'_var_g'_y
+              have t1 : f' x = Model.Vₙ M i := Eq.trans (f'_var_g'_y x (Ne.symm x_y)) h_which_var
+              have exists_mirror := variant_mirror_property g g' f' h_var (is_variant_symm.mp f'_var_g'_y)
+              match exists_mirror with
+              | ⟨f, g_var_f_y, f_var_f'_x⟩ =>
+                  have t2 : (M,s,f) ⊨ ψ[i//x] := h1 f (is_variant_symm.mp g_var_f_y)
+                  exact (@ih s f f' f_var_f'_x t1).mp t2
+            . intro h2
+              intro f f_var_g_y
+              have exists_mirror := variant_mirror_property g' g f (is_variant_symm.mp h_var) (is_variant_symm.mp f_var_g_y)
+              match exists_mirror with
+              | ⟨f', g'_var_f'_y, f'_var_f_x⟩ =>
+                  have t1 : f' x = Model.Vₙ M i := by
+                    rw [← g'_var_f'_y x (Ne.symm x_y), h_which_var]
+                  have t2 : (M,s,f') ⊨ ψ := h2 f' (is_variant_symm.mp g'_var_f'_y)
+                  exact (@ih s f f' (is_variant_symm.mp f'_var_f_x) t1).mpr t2
+      | _ => simp
+
+  theorem sat_iterated_nec {φ : Form} {n : Nat} {M : Model} {s : M.W} {g : I M.W} :
+  ((M,s,g) ⊨ iterate_nec n φ) ↔ (∀ s' : M.W, (path M.R s s' n) → (M,s',g) ⊨ φ) := by
+    induction n generalizing φ with
+    | zero   =>
+        rw [iterate_nec, iterate_nec.loop]
+        unfold path
+        apply Iff.intro
+        . intro _ _ s_s'
+          rw [←s_s']
+          assumption
+        . intro h
+          exact h s (Eq.refl s)
+    | succ m ih =>
+        apply Iff.intro
+        . intro h1
+          rw [iter_nec_succ] at h1
+          intro s' ex_path1
+          unfold path at ex_path1
+          match ex_path1 with
+          | ⟨i, i_R_s', ex_path2⟩ =>
+              exact ih.mp h1 i ex_path2 s' i_R_s'
+        . intro h2
+          rw [iter_nec_succ, ih]
+          intro i ex_path2 s' i_R_s'
+          have ex_path1 : path M.R s s' (Nat.succ m) := ⟨i, i_R_s', ex_path2⟩
+          exact h2 s' ex_path1
+
+  theorem sat_iterated_pos {φ : Form} {n : Nat} {M : Model} {s : M.W} {g : I M.W} :
+  ((M,s,g) ⊨ iterate_pos n φ) ↔ (∃ s' : M.W, (path M.R s s' n) ∧ (M,s',g) ⊨ φ) := by
+    induction n generalizing φ with
+    | zero   =>
+        rw [iterate_pos, iterate_pos.loop]
+        unfold path
+        apply Iff.intro
+        . intro h
+          let s' := s
+          exists s'
+        . intro h
+          match h with
+          | ⟨s', s_s', s'_sat_φ⟩ => rw [s_s'] ; exact s'_sat_φ
+    | succ m ih =>
+        apply Iff.intro
+        . intro h1
+          rw [iter_pos_succ] at h1
+          have by_ih := ih.mp h1
+          match by_ih with
+          | ⟨s', ex_path1, s'_pos_φ⟩ => 
+            rw [pos_sat] at s'_pos_φ
+            match s'_pos_φ with
+              | ⟨s'', s'_R_s'', s''_φ⟩ => 
+                exists s''
+                exact ⟨⟨s', s'_R_s'', ex_path1⟩, s''_φ⟩
+        . intro h2
+          rw [iter_pos_succ]
+          unfold path at h2
+          match h2 with
+          | ⟨s', exist, s'_φ⟩ =>
+            match exist with
+            | ⟨s'', s''_R_s', ex_path2⟩ =>
+              have s''_pos_φ : (M,s'',g) ⊨ ◇ φ := by rw [pos_sat] ; exists s'
+              have premise : ∃ s'', path M.R s s'' m ∧ (M,s'',g)⊨◇ φ := ⟨s'', ⟨ex_path2, s''_pos_φ⟩⟩
+              exact ih.mpr premise
+
+  theorem svar_unique_state {v : SVAR} {M : Model} {s : M.W} {g : I M.W} :
+  (((M,s,g) ⊨ Form.svar v) → (∀ r : M.W, ((M,r,g) ⊨ Form.svar v) → r = s)) := by
+    intro h1 r h2
+    rw [h2, h1]
 
 end Lemmas
 
-theorem Soundness {Γ : set Form} {φ : Form} : (Γ ⊢ φ) → (Γ ⊨ φ)
-  | Proof.premise hp => by
+theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
+  intro pf
+  induction pf with 
+  | @ax_k Γ =>
       rw [Entails]
-      intro (M : Model) (M_sat_Γ : M⊨Γ) (s : M.W) (g : I M.W)
-      rw [Models_Set] at M_sat_Γ
-      exact M_sat_Γ s g φ hp
-
-  | Proof.general t => by
-      admit
-
-  | Proof.necess pf => by
-     admit
-
-  | Proof.ax_k => by
-      rw [Entails]
-      intro (M : Model) (M_sat_Γ : M ⊨ Γ) (s : M.W) (g : I M.W)
+      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
       unfold Sat
       intro nec_impl nec_phi (s' : M.W) (rel : M.R s s')
       exact (nec_impl s' rel) (nec_phi  s' rel)
 
-  | @Proof.ax_q1 _ _ _ _ p => by
-      intro _ _ _ g h1 h2 g' variant
+  | @ax_q1 Γ _ _ _ p =>
+      intro _ _ g _ h1 h2 g' variant
       exact (h1 g' variant) ((generalize_bound p h2) g' variant)
 
-  | @Proof.ax_q2_svar _ φ x y h_subst => by
-      intro (M : Model) (M_sat_Γ : M ⊨ Γ) (s : M.W) (g : I M.W)
+  | @ax_q2_svar Γ φ x y h_subst =>
+      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
       intro h
       -- let's build an explicit x-variant of g, named g'
       let g' : I M.W := λ v => ite (v ≠ x) (g v) (g y)
@@ -210,8 +349,82 @@ theorem Soundness {Γ : set Form} {φ : Form} : (Γ ⊢ φ) → (Γ ⊨ φ)
         simp [Ne.symm x_not_v]
       have h_which_var : g' x = g y := by simp
       -- this exact g' can be used in the substitution lemma we proved
-      rw [@svar_substitution φ x y M s g g' h_subst h_var h_which_var]
+      rw [svar_substitution h_subst h_var h_which_var]
       -- now the goal becomes immediately provable
       exact h g' (is_variant_symm.mp h_var)
+  
+  | @ax_q2_nom Γ φ x i =>
+      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
+      intro h
+      let g' : I M.W := λ v => ite (v ≠ x) (g v) (M.Vₙ i)
+      have h_var : is_variant g g' x := by
+        intro v x_not_v
+        simp [Ne.symm x_not_v]
+      have h_which_var : g' x = M.Vₙ i := by simp
+      rw [nom_substitution h_var h_which_var]
+      exact h g' (is_variant_symm.mp h_var)
+  
+  | @ax_name Γ v =>
+      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
+      rw [ex_sat]
+      let g' : I M.W := λ x => ite (v = x) s (g x)
+      apply Exists.intro
+      . apply And.intro
+        . exact show is_variant g' g v by
+            rw [is_variant]
+            intro y v_not_y
+            simp [v_not_y]
+        . simp
 
-  | _ => sorry
+  | @ax_nom Γ φ v n m =>
+      intro _ _ _ _ _ _ h
+      rw [sat_iterated_pos] at h
+      rw [sat_iterated_nec]
+      intro s'' _ s''_sat_v
+      match h with
+      | ⟨s', _, s'_sat⟩ =>
+          rw [and_sat] at s'_sat
+          have s'_sat_v := s'_sat.left
+          have s'_sat_φ := s'_sat.right
+          have s''_is_s' := svar_unique_state s'_sat_v s'' s''_sat_v
+          rw [s''_is_s']
+          exact s'_sat_φ
+  
+  | @ax_brcn Γ φ v =>
+      intro M s g M_sat_Γ (h : (M,s,g) ⊨ all v, □φ) s' sRs' g' g_var_g'_v
+      exact (h g' g_var_g'_v) s' sRs'
+
+  | @premise Γ φ hp =>
+      intro _ _ _ M_sat_Γ
+      exact M_sat_Γ φ hp
+
+  | @general Γ φ v t restrict₁ restrict₂ _ ih =>
+      intro M s g M_sat_Γ
+      rw [Sat_Set] at M_sat_Γ
+      
+      admit
+/-
+      rw [Entails]
+      intro M
+      intro s g
+      intro M_sat_Γ
+      intro g' _
+      exact ih M M_sat_Γ s g'
+-/
+
+  | necess _ ih =>
+      intro M s g M_sat_Γ
+      intro s' _
+      -- ∅
+      -- you need a proof of:
+      -- p : ∀ M, s, g: (M,s,g)⊨∅
+      -- then do
+      -- exact ih ∅ M s' g p
+      have := ih Γ
+      admit
+
+  | tautology => admit
+
+  | ponens _ _ ih_maj ih_min =>
+      intro M M_sat_Γ s g
+      exact (ih_maj M M_sat_Γ s g) (ih_min M M_sat_Γ s g)

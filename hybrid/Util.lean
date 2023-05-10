@@ -1,5 +1,9 @@
 open Classical
 
+def set (α : Type u) := α → Prop
+def member {α : Type u} (A : set α) (a : α) := A a
+notation a "∈" A => member A a
+
 @[simp]
 theorem double_negation : ¬¬p ↔ p :=
   Iff.intro
@@ -55,7 +59,7 @@ theorem negated_impl : ¬(p → q) ↔ p ∧ ¬q :=
           -- case 1.a : p and q
             (fun hq : q =>
               ⟨
-                hp, show ¬q from (fun q => show False from hyp (fun p => hq))
+                hp, show ¬q from (fun _ => show False from hyp (fun _ => hq))
               ⟩
             )
           -- case 1.b : p and non q
@@ -95,6 +99,7 @@ theorem negated_universal {α : Type} {p : α → Prop} : (¬ ∀ x, p x) ↔ (�
       )
     )
 
+@[simp]
 theorem conj_comm : p ∧ q ↔ q ∧ p := 
   Iff.intro
     (fun hpq : p ∧ q =>

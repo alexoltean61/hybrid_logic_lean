@@ -325,20 +325,19 @@ section Lemmas
 
 end Lemmas
 
-theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
+theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
   intro pf
   induction pf with
-
   | tautology₁ =>
-      intro _ _ _ _ phi _
+      intro _ _ _ phi _
       exact phi
 
   | tautology₂ =>
-      intro _ _ _ _ h1 h2 h3
+      intro _ _ _ h1 h2 h3
       exact (h1 h3) (h2 h3)
 
   | tautology₃ =>
-      intro _ _ _ _ h1 h2
+      intro _ _ _ h1 h2
       rw [Sat, neg_sat, implication_disjunction, double_negation] at h1
       apply Or.elim h1
       . intro
@@ -346,19 +345,18 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
       . intro h3
         exact False.elim (h3 h2)
 
-  | @ax_k Γ =>
-      rw [Entails]
-      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
+  | ax_k =>
+      intro (M : Model) (s : M.W) (g : I M.W)
       unfold Sat
       intro nec_impl nec_phi (s' : M.W) (rel : M.R s s')
       exact (nec_impl s' rel) (nec_phi  s' rel)
 
-  | @ax_q1 Γ _ _ _ p =>
-      intro _ _ g _ h1 h2 g' variant
+  | ax_q1 p =>
+      intro _  g _ h1 h2 g' variant
       exact (h1 g' variant) ((generalize_bound p h2) g' variant)
 
-  | @ax_q2_svar Γ φ x y h_subst =>
-      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
+  | ax_q2_svar x y h_subst =>
+      intro (M : Model) (s : M.W) (g : I M.W)
       intro h
       -- let's build an explicit x-variant of g, named g'
       let g' : I M.W := λ v => ite (v ≠ x) (g v) (g y)
@@ -371,8 +369,8 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
       -- now the goal becomes immediately provable
       exact h g' (is_variant_symm.mp h_var)
   
-  | @ax_q2_nom Γ φ x i =>
-      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
+  | ax_q2_nom x i =>
+      intro (M : Model) (s : M.W) (g : I M.W)
       intro h
       let g' : I M.W := λ v => ite (v ≠ x) (g v) (M.Vₙ i)
       have h_var : is_variant g g' x := by
@@ -382,8 +380,8 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
       rw [nom_substitution h_var h_which_var]
       exact h g' (is_variant_symm.mp h_var)
   
-  | @ax_name Γ v =>
-      intro (M : Model) (s : M.W) (g : I M.W) (M_sat_Γ : (M,s,g) ⊨ Γ)
+  | ax_name v =>
+      intro (M : Model) (s : M.W) (g : I M.W)
       rw [ex_sat]
       let g' : I M.W := λ x => ite (v = x) s (g x)
       apply Exists.intro
@@ -394,8 +392,8 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
             simp [v_not_y]
         . simp
 
-  | @ax_nom Γ φ v n m =>
-      intro _ _ _ _ _ _ h
+  | ax_nom n m =>
+      intro _ _ _ _ _ h
       rw [sat_iterated_pos] at h
       rw [sat_iterated_nec]
       intro s'' _ s''_sat_v
@@ -408,39 +406,22 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
           rw [s''_is_s']
           exact s'_sat_φ
   
-  | @ax_brcn Γ φ v =>
-      intro M s g M_sat_Γ (h : (M,s,g) ⊨ all v, □φ) s' sRs' g' g_var_g'_v
+  | @ax_brcn φ v =>
+      intro M s g (h : (M,s,g) ⊨ all v, □φ) s' sRs' g' g_var_g'_v
       exact (h g' g_var_g'_v) s' sRs'
 
-  | @premise Γ φ hp =>
-      intro _ _ _ M_sat_Γ
-      exact M_sat_Γ φ hp
-
-  | @general Γ φ v t restrict₁ restrict₂ _ ih =>
-      intro M s g M_sat_Γ
-      rw [Sat_Set] at M_sat_Γ
-      
-      admit
-/-
-      rw [Entails]
-      intro M
-      intro s g
-      intro M_sat_Γ
-      intro g' _
-      exact ih M M_sat_Γ s g'
--/
+  | general _ ih =>
+      intro M s _ g' _
+      exact ih M s g'
 
   | necess _ ih =>
-      intro M s g M_sat_Γ
-      intro s' _
-      -- ∅
-      -- you need a proof of:
-      -- p : ∀ M, s, g: (M,s,g)⊨∅
-      -- then do
-      -- exact ih ∅ M s' g p
-      have := ih Γ
-      admit
+      intro M _ g s' _
+      exact ih M s' g
 
   | ponens _ _ ih_maj ih_min =>
-      intro M M_sat_Γ s g
-      exact (ih_maj M M_sat_Γ s g) (ih_min M M_sat_Γ s g)
+      intro M s g
+      exact (ih_maj M s g) (ih_min M s g)
+
+theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
+  rw [SyntacticConsequence, SemanticConsequence]
+  exact @WeakSoundness (conjunction Γ⟶φ)

@@ -174,7 +174,7 @@ example : (¬p ∨ q) → (p → q) :=
       Or.elim
         hpq
         (fun hnp : ¬p => (fun hp : p => False.elim (hnp hp)))
-        (fun hq : q => (fun p => hq))
+        (fun hq : q => (fun _ => hq))
 
 example : p ∨ False ↔ p :=
     Iff.intro

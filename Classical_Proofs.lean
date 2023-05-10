@@ -9,8 +9,8 @@ example : (p → q ∨ r) → ((p → q) ∨ (p → r)) :=
         (fun hp : p =>
           Or.elim
             (hpqr hp)
-            (fun hq : q => Or.intro_left (p → r) (fun p => hq))
-            (fun hr : r => Or.intro_right (p → q) (fun p => hr))
+            (fun hq : q => Or.intro_left (p → r) (fun _ => hq))
+            (fun hr : r => Or.intro_right (p → q) (fun _ => hr))
         )
         (fun hnp : ¬p =>
           Or.intro_right (p → q) (fun hp : p => False.elim (hnp hp))
@@ -41,7 +41,7 @@ example : ¬(p → q) → p ∧ ¬q :=
           -- case 1.a : p and q
             (fun hq : q =>
               ⟨
-                hp, show ¬q from (fun q => show False from hyp (fun p => hq))
+                hp, show ¬q from (fun _ => show False from hyp (fun _ => hq))
               ⟩
             )
           -- case 1.b : p and non q
@@ -70,7 +70,7 @@ example : (¬q → ¬p) → (p → q) :=
       byCases
         (fun hq : q =>
           byCases
-            (fun hp : p => (fun p => hq))
+            (fun _ : p => (fun _ => hq))
             (fun hnp : ¬p => (fun p => show q from False.elim (hnp p)))
         )
         (fun hnq : ¬q => (fun hp : p => show q from False.elim ((hyp hnq) hp)))

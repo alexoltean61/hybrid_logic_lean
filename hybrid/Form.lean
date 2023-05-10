@@ -1,9 +1,5 @@
 import Hybrid.Util
 
-def set (α : Type u) := α → Prop
-def member {α : Type u} (A : set α) (a : α) := A a
-notation a "∈" A => member A a
-
 section Basics
   structure PROP where
     letter : Nat
@@ -29,7 +25,7 @@ section Basics
     | box  : Form → Form
     -- hybrid:
     | bind : SVAR → Form → Form
-  deriving Repr
+  deriving DecidableEq, Repr
 
   @[simp]
   def Form.neg      : Form → Form := λ φ => Form.impl φ Form.bttm
@@ -55,6 +51,17 @@ section Basics
   notation:120 "all " x ", " φ => Form.bind x φ
   notation:120 "ex " x ", " φ => Form.bind_dual x φ
   notation "⊥"  => Form.bttm
+
+  @[simp]
+  def conjunction (Γ : List Form) : Form :=
+  match Γ with
+    | []     => ⊥ ⟶ ⊥
+    | h :: t => h ⋀ conjunction t
+  
+  @[simp]
+  theorem on_conj : (h ⋀ conjunction t) = (conjunction (h :: t)) := by
+    rw [conjunction]
+
 end Basics
 
 section Variables
@@ -184,18 +191,6 @@ section Substitutions
     --
     -- Takeaway: s is substable for all free occurences of x only as long
     --         as x *does not occur free in the scope of an s-quantifier*
-
-
---  class Subst (α : Type) where
---    subst : Form → α → SVAR → Form
-  
---  instance : Subst SVAR where
---    subst := subst_svar
---  instance : Subst NOM where
---    subst := subst_nom
-
---  def substitute [Subst α] (φ : Form) (s : α) (x : SVAR) : Form :=
---    Subst.subst φ s x
 
   notation:150 φ "[" s "//" x "]" => subst_svar φ s x
   notation:150 φ "[" s "//" x "]" => subst_nom  φ s x

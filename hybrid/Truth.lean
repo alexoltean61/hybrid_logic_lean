@@ -6,7 +6,7 @@ section Definitions
   structure Model where
     W : Type
     R : W → W → Prop
-    Vₚ: PROP → set W
+    Vₚ: PROP → Set W
     Vₙ: NOM  → W
 
   -- interpretation function
@@ -22,7 +22,7 @@ section Definitions
     | Nat.succ m => ∃ i : α, (R i b) ∧ (path R a i m)
 
   @[simp]
-  def is_variant (g₁ : I W) (g₂ : I W) (x : SVAR) := ∀ y : SVAR, ((x ≠ y) → (g₁ y = g₂ y))
+  def is_variant (g₁ g₂ : I W) (x : SVAR) := ∀ y : SVAR, ((x ≠ y) → (g₁ y = g₂ y))
 
   @[simp]
   def Sat (M : Model) (s : M.W) (g : I M.W) : (φ : Form) → Prop
@@ -36,31 +36,40 @@ section Definitions
 
   notation "(" M "," s "," g ")" "⊨" φ => Sat M s g φ
   notation "(" M "," s "," g ")" "⊭" φ => ¬ Sat M s g φ
+  
+  theorem neg_sat : ((M,s,g) ⊨ ∼φ) ↔ ((M,s,g) ⊭ φ) := by
+    simp only [Sat, or_false]
+  theorem and_sat : ((M,s,g) ⊨ φ ⋀ ψ) ↔ (((M,s,g) ⊨ φ) ∧ (M,s,g) ⊨ ψ) := by
+    simp
+  theorem or_sat  : ((M,s,g) ⊨ φ ⋁ ψ) ↔ (((M,s,g) ⊨ φ) ∨ (M,s,g) ⊨ ψ) := by
+    simp
+  theorem pos_sat : (((M,s,g) ⊨ ◇φ) ↔ (∃ s' : M.W, (M.R s s' ∧ (M,s',g) ⊨ φ))) := by
+    simp
+  theorem ex_sat  : ((M,s,g) ⊨ ex x, φ) ↔ (∃ g' : I M.W, (is_variant g' g x) ∧ ((M,s,g') ⊨ φ)) := by
+    simp [-is_variant]
 
   @[simp]
-  def Models (M : Model) (φ : Form) := ∀ (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
-
-  infix:1000 "⊨" => Models
-  infix:1000 "⊭" => ¬ Models
-
-  @[simp]
-  def Valid (φ : Form) := ∀ (M : Model), (M ⊨ φ)
+  def Valid (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
 
   prefix:1000 "⊨" => Valid
   prefix:1000 "⊭" => ¬ Valid
 
   @[simp]
-  def Sat_Set (M : Model) (s : M.W) (g : I M.W) (Γ : List Form) := ∀ (φ : Form), (List.elem φ Γ) → ((M, s, g) ⊨ φ)
+  def Sat_Set (M : Model) (s : M.W) (g : I M.W) (Γ : Set Form) := ∀ (φ : Form), (φ ∈ Γ) → ((M, s, g) ⊨ φ)  
 
   notation "(" M "," s "," g ")" "⊨" Γ => Sat_Set M s g Γ
   notation "(" M "," s "," g ")" "⊭" Γ => ¬ Sat_Set M s g Γ
 
-  @[simp]
-  def Entails (Γ : List Form) (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ) 
   --def Entails (Γ : set Form) (φ : Form) := ∀ M : Model, (M ⊨ Γ) → (M ⊨ φ) 
+  @[simp]
+  def Entails (Γ : Set Form) (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ) 
+
 
   infix:1000 "⊨" => Entails
-  infix:1000 "⊭" => ¬ Entails
+  notation Γ "⊭" φ => ¬ (Entails Γ φ)
+
+  @[simp]
+  def Set.satisfiable (Γ : Set Form) := ∃ (M : Model) (s : M.W) (g : I M.W), (M,s,g) ⊨ Γ
 
 end Definitions
 
@@ -107,28 +116,20 @@ section Theorems
       exists g₂
       apply And.intro
       . rw [is_variant]
-        intro v v_not_x
-        have v_not_x := Ne.symm v_not_x
-        simp
-        unfold ite
-        cases (instDecidableEqSVAR v x) with
-        | isTrue  v_is_x =>
-            exact False.elim (v_not_x v_is_x)
-        | isFalse _      =>
-            cases (instDecidableEqSVAR v y) with
-            | isTrue  _       => rfl
-            | isFalse v_not_y => rw [show (g₁ v = g₃ v) from two_step v (And.intro v_not_x v_not_y)]
+        intro v v_x
+        have v_x := Ne.symm v_x
+        simp only [v_x, ite_false, Ne.symm]
+        by_cases v_y : v = y
+        . simp only [v_y, ite_true]
+        . simp only [show (g₁ v = g₃ v) from
+                          two_step v (And.intro v_x v_y),
+                     ite_self]
       . rw [is_variant]
-        intro v v_not_y
-        have v_not_y := Ne.symm v_not_y
-        simp
-        unfold ite
-        cases (instDecidableEqSVAR v x) with
-        | isTrue  _ => rfl
-        | isFalse _ =>
-          cases (instDecidableEqSVAR v y) with
-          | isTrue v_is_y => exact False.elim (v_not_y v_is_y)
-          | isFalse _     => rfl
+        intro v v_y
+        have v_y := Ne.symm v_y
+        by_cases v_x : v = x
+        . simp only [v_x, ite_true]
+        . simp only [v_x, v_y, ite_false, ite_self]
 
     theorem variant_mirror_property (g₁ g₂ g₃ : I W) {x y : SVAR} (g₁₂x : is_variant g₁ g₂ x) (g₂₃y : is_variant g₂ g₃ y) : 
       ∃ g₂_mirror : I W, (is_variant g₁ g₂_mirror y ∧ is_variant g₂_mirror g₃ x) := by
@@ -160,125 +161,25 @@ section Theorems
         | ⟨mid_g, mid_g_var_g, mid_g_var_i⟩ =>
           have mid_g_sat := h2 mid_g (is_variant_symm.mp mid_g_var_g)
           exact mid_g_sat i (is_variant_symm.mp mid_g_var_i)
-  
-    theorem neg_sat {φ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ ∼φ) ↔ ((M,s,g) ⊭ φ) := by
-      simp
-    theorem and_sat {φ ψ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ φ ⋀ ψ) ↔ (((M,s,g) ⊨ φ) ∧ (M,s,g) ⊨ ψ) := by
-      simp
-    theorem or_sat  {φ ψ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ φ ⋁ ψ) ↔ (((M,s,g) ⊨ φ) ∨ (M,s,g) ⊨ ψ) := by
-      simp
-    theorem pos_sat {φ : Form} {M : Model} {s : M.W} {g : I M.W} : (((M,s,g) ⊨ ◇φ) ↔ (∃ s' : M.W, (M.R s s' ∧ (M,s',g) ⊨ φ))) := by
-      simp
-    theorem ex_sat  {x : SVAR} {φ : Form} {M : Model} {s : M.W} {g : I M.W} : ((M,s,g) ⊨ ex x, φ) ↔ (∃ g' : I M.W, (is_variant g' g x) ∧ ((M,s,g') ⊨ φ)) := by
-      simp [-is_variant]
 
-    theorem sat_nested_impl : ((M,s,g) ⊨ φ ⟶ ψ ⟶ χ) ↔ ((M,s,g) ⊨ (φ ⋀ ψ) ⟶ χ) := by
-      apply Iff.intro
-      . intro h1 h2
-        rw [and_sat] at h2
-        exact h1 (h2.left) (h2.right)
-      . intro h1 h2 h3
-        exact h1 (and_sat.mpr ⟨h2, h3⟩)
-
-    theorem sat_truth : ((M,s,g) ⊨ ⊥ ⟶ ⊥) := by
-      intro _
-      assumption
-
-    theorem sat_empty_set : ∀ (M : Model) (s : M.W) (g : I M.W), ((M,s,g) ⊨ []) := by
-      intro _ _ _ _ _
-      contradiction
-
-    theorem sat_singleton_set : ((M,s,g) ⊨ [φ]) ↔ ((M,s,g) ⊨ φ) := by
-      unfold Sat_Set
-      apply Iff.intro
-      . intro h
-        apply h
-        rw [List.elem, beq_self_eq_true φ]
-      . intro h
-        intro ψ elem_ψ
-        rw [List.elem, List.elem] at elem_ψ
-        cases t : ψ == φ
-        . rw [t] at elem_ψ
-          contradiction
-        . rw [eq_of_beq t]
-          exact h
-
-    theorem sat_cons {Γ : List Form} : (((M,s,g) ⊨ Γ) ∧ ((M,s,g) ⊨ [φ])) ↔ ((M,s,g) ⊨ φ :: Γ) := by
-      rw [sat_singleton_set]
-      apply Iff.intro
-      . intro h ψ
-        by_cases c : ψ = φ
-        . rw [List.elem, c]
-          intro _
-          exact h.right
-        . rw [List.elem, beq_false_of_ne c]
-          intro h2
-          exact h.left ψ h2
-      . intro h
-        apply And.intro
-        . intro ψ ψ_in_Γ
-          have : List.elem ψ (φ :: Γ) = true := by
-            by_cases c : ψ = φ
-            . rw [List.elem, c, beq_self_eq_true]
-            . rw [List.elem, beq_false_of_ne c, ψ_in_Γ]
-          exact h ψ this
-        . apply h φ
-          rw [List.elem, beq_self_eq_true]
-
-    theorem sat_prec : ((M,s,g) ⊨ h :: t) → ((M,s,g) ⊨ t) := by
-      intro hyp ψ ψ_in_t
-      have : List.elem ψ (h :: t) = true := by
-        by_cases c : ψ = h
-        . rw [List.elem, c, beq_self_eq_true]
-        . rw [List.elem, beq_false_of_ne c, ψ_in_t]
-      exact hyp ψ this
-
-    theorem Deduction (Γ : List Form) (φ : Form) : ((ψ :: Γ) ⊨ φ) ↔ (Γ ⊨ (ψ ⟶ φ)) := by
-      apply Iff.intro
-      . intro hyp
-        intro M s g sat_Γ sat_ψ
-        apply hyp M s g
-        rw [←sat_singleton_set] at sat_ψ
-        exact (@sat_cons M s g ψ Γ).mp ⟨sat_Γ, sat_ψ⟩
-      . intro hyp
-        intro M s g sat_ψ_Γ 
-        have sat_h_t := (@sat_prec M s g ψ Γ) sat_ψ_Γ 
-        have sat_ψ := sat_ψ_Γ ψ
-        rw [List.elem, beq_self_eq_true] at sat_ψ
-        have sat_ψ := sat_ψ (Eq.refl true)
-        exact hyp M s g sat_h_t sat_ψ
-
-    theorem SemanticConsequence (Γ : List Form) (φ : Form) : (Γ ⊨ φ) ↔ (⊨ (conjunction Γ ⟶ φ)) := by
-      induction Γ generalizing φ with
-      | nil     =>
-          unfold conjunction
-          apply Iff.intro
-          . intro h
-            intro M s g _
-            exact (h M s g) (sat_empty_set M s g)
-          . intro h
-            intro M s g _
-            exact (h M s g) sat_truth
+    theorem SatConjunction (Γ : Set Form) (L : List Γ) : Γ ⊨ conjunction Γ L := by
+      intro M s g M_sat_Γ
+      induction L with
+      | nil => 
+          simp only [conjunction, Sat]
       | cons h t ih =>
-          rw [Deduction, ih (h ⟶ φ)]
-          apply Iff.intro
-          . intro hyp
-            intro M s g sat_conj
-            have := sat_nested_impl.mp (hyp M s g)
-            have : (M,s,g)⊨h⋀conjunction t⟶φ := by
-              intro p
-              rw [and_sat] at p
-              exact this (and_sat.mpr ⟨p.right, p.left⟩)
-            rw [on_conj] at this
-            exact this sat_conj
-          . intro hyp
-            intro M s g sat_conj
-            conv at hyp => rhs lhs rw [←on_conj]
-            have : (M,s,g)⊨(conjunction t⋀h)⟶φ := by
-              intro p
-              rw [and_sat] at p
-              exact (hyp M s g) (and_sat.mpr ⟨p.right, p.left⟩)
-            exact (sat_nested_impl.mpr this) sat_conj
+          simp only [conjunction, and_sat, ih, and_true]
+          exact M_sat_Γ h h.prop 
+
+    theorem SetEntailment (Γ : Set Form) : (∃ L, ⊨ (conjunction Γ L ⟶ ψ)) → Γ ⊨ ψ := by
+      intro h
+      intro M s g M_sat_Γ
+      match h with
+      | ⟨L, hw⟩ =>
+          have l1 := hw M s g
+          have l2 := SatConjunction Γ L M s g M_sat_Γ
+          rw [Sat] at l1
+          exact l1 l2
 
     end Satisfaction
 

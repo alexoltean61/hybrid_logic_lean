@@ -1,8 +1,7 @@
 open Classical
 
-def set (α : Type u) := α → Prop
-def member {α : Type u} (A : set α) (a : α) := A a
-notation a "∈" A => member A a
+theorem eq_symm : (a = b) ↔ (b = a) := by
+  apply Iff.intro <;> intro h <;> exact h.symm
 
 @[simp]
 theorem double_negation : ¬¬p ↔ p :=
@@ -49,6 +48,25 @@ theorem negated_disjunction : ¬(p ∨ q) ↔ ¬p ∧ ¬q :=
     )
 
 @[simp]
+theorem negated_conjunction : ¬(p ∧ q) ↔ ¬p ∨ ¬q := by
+  apply Iff.intro
+  . intro h
+    by_cases hp : p
+    . by_cases hq : q
+      . exact False.elim (h ⟨hp, hq⟩)
+      . apply Or.inr
+        assumption
+    . apply Or.inl
+      assumption
+  . intro h
+    intro hpq
+    apply Or.elim h
+    . intro hnp
+      exact hnp hpq.left
+    . intro hnq
+      exact hnq hpq.right
+
+@[simp]
 theorem negated_impl : ¬(p → q) ↔ p ∧ ¬q :=
   Iff.intro
     (fun hyp : ¬(p → q) =>
@@ -79,8 +97,9 @@ theorem negated_impl : ¬(p → q) ↔ p ∧ ¬q :=
         absurd (impl hyp.left) hyp.right
     )
 
+universe u
 @[simp]
-theorem negated_universal {α : Type} {p : α → Prop} : (¬ ∀ x, p x) ↔ (∃ x, ¬ p x) :=
+theorem negated_universal {α : Type u} {p : α → Prop} : (¬ ∀ x, p x) ↔ (∃ x, ¬ p x) :=
     Iff.intro
     (fun h1 : ¬ ∀ x, p x =>
       byContradiction
@@ -100,6 +119,21 @@ theorem negated_universal {α : Type} {p : α → Prop} : (¬ ∀ x, p x) ↔ (�
     )
 
 @[simp]
+theorem negated_existential {α : Type u} {p : α → Prop} : (¬ ∃ x, p x) ↔ (∀ x, ¬ p x) :=
+    Iff.intro
+    (fun h1 : ¬ ∃ x, p x =>
+      (fun a : α =>
+        fun hpa: p a => show False from h1 ⟨a, hpa⟩ 
+      )
+    )
+    (fun h2 : ∀ x, ¬ p x =>
+      (fun hex : ∃ x, p x => 
+        match hex with
+        | ⟨w, hw⟩ => show False from (h2 w) hw
+      )
+    )
+
+@[simp]
 theorem conj_comm : p ∧ q ↔ q ∧ p := 
   Iff.intro
     (fun hpq : p ∧ q =>
@@ -108,3 +142,29 @@ theorem conj_comm : p ∧ q ↔ q ∧ p :=
     (fun hqp : q ∧ p =>
       ⟨hqp.right, hqp.left⟩
     )
+
+theorem disj_comm : p ∨ q ↔ q ∨ p :=
+  Iff.intro
+    (fun hpq : p ∨ q =>
+      Or.elim
+        hpq
+        (fun hp : p => Or.intro_right q hp)
+        (fun hq : q => Or.intro_left p hq)
+    )
+    (fun hqp : q ∨ p =>
+      Or.elim
+        hqp
+        (fun hq : q => Or.intro_right p hq)
+        (fun hp : p => Or.intro_left q hp)
+    )
+
+theorem contraposition (p q : Prop) : (p → q) ↔ (¬q → ¬p) := by
+  apply Iff.intro
+  . intro hpq
+    intro hnq hp
+    exact hnq (hpq hp)
+  . intro hnqp
+    intro hp
+    by_cases c : q
+    . exact c
+    . exact False.elim ((hnqp c) hp)

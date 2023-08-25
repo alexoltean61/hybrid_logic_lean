@@ -83,7 +83,7 @@ lemma split_prefix_suffix {a b : List (ℕ × ℕ × ℕ × ℕ)} (hyp : a.isPre
               simp
               exact ⟨⟨h1.symm, hsum⟩, is_suffix_cons hb hsuf⟩ 
 
-theorem fuck (n m : Nat) : 3^(n+1) ≠ 2^(m+1) := by admit
+theorem prime_2_3 (n m : Nat) : 3^(n+1) ≠ 2^(m+1) := by admit
 
 lemma pow2listinj : pow2list.Injective := by
   intro l1 l2 hyp
@@ -162,7 +162,7 @@ lemma squash_lemma_wlog (h : (pow2list a).length ≤ (pow2list n).length) : squa
           match is_pow_2 with
           | ⟨n, abs_2⟩ =>
               rw [abs_2] at abs_1
-              apply fuck
+              apply prime_2_3
               apply abs_1
 
 lemma squash_lemma : squash a b = squash n m → (pow2list a = pow2list n ∧ pow3list b = pow3list m) := by

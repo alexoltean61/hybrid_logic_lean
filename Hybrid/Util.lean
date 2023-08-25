@@ -1,4 +1,24 @@
+import Std.Logic
 open Classical
+
+def TypeIff (a : Type u) (b : Type v) := Prod (a → b) (b → a)
+def TypeIff.intro (a : Type u) (b : Type v) : (a → b) → (b → a) → (TypeIff a b) := by
+  apply Prod.mk
+def TypeIff.mp  (p : TypeIff a b) : a → b := p.1
+def TypeIff.mpr (p : TypeIff a b) : b → a := p.2
+theorem TypeIff.refl : TypeIff a a := by
+  apply TypeIff.intro <;> (intro; assumption)
+theorem TypeIff.trans {h1 : TypeIff a b} {h2 : TypeIff b c} : TypeIff a c := by
+  apply TypeIff.intro
+  . intro h
+    exact h2.mp (h1.mp h)
+  . intro h
+    exact h1.mpr (h2.mpr h)
+infix:300 "iff" => TypeIff
+
+theorem choice_intro (q : α → Prop) (p : α → Prop) (P : ∃ a, p a) : (∀ a, p a → q a) → q P.choose := by
+  intro h
+  exact (h P.choose P.choose_spec)
 
 theorem eq_symm : (a = b) ↔ (b = a) := by
   apply Iff.intro <;> intro h <;> exact h.symm

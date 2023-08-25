@@ -1,5 +1,13 @@
 import Hybrid.Tautology
 
+theorem empty_list (L : List {x : Form | False}) : L = [] := by
+  match L with
+  | [] => simp
+  | h :: t =>
+      exfalso
+      have := h.2
+      simp at this
+
 def List.max_form {Γ : Set Form} : List Γ → (Form → ℕ) → ℕ
 | .nil, f      => f ⊥
 | .cons h t, f => if (f h) > (t.max_form f) then (f h) else (t.max_form f)

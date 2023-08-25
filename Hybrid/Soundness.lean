@@ -1,112 +1,89 @@
-import Hybrid.Form
+import Hybrid.Substitutions
 import Hybrid.Proof
 import Hybrid.Truth
 import Hybrid.Util
 open Classical
 
 section Lemmas
-  theorem generalize_not_free (h1 : is_free v φ = false) : ⊨ (φ ⟶ (all v, φ)) := by
+
+  theorem generalize_not_free (h1 : is_free v φ = false) : ⊨ (φ ⟷ (all v, φ)) := by
     intro M s g
-    intro h2
-    match φ with
-    | Form.bttm   => exact False.elim h2
-    | Form.prop p =>
-        simp at h2
-        rw [Sat]
-        intros
-        exact h2
-    | Form.svar x =>
-        simp only [is_free, beq_eq_false_iff_ne, ne_eq] at h1 
-        intro _ var
-        exact Eq.trans h2 (Eq.symm (var x h1))
-    | Form.nom _ =>
-        intro _ _
-        exact h2
-    | Form.impl ψ χ =>
-        rw [Sat]
-        simp only [is_free, Bool.or_eq_false_eq_eq_false_and_eq_false] at h1 
-        rw [Sat] at h2
-        intros g' variant antecedent
-        have sym_variant := is_variant_symm.mp variant
-        -- apply the induction hypothesis:
-        have by_ind_hyp := generalize_not_free h1.left M s g' antecedent
-        have by_mp_ind  := generalize_not_free h1.right M s g (h2 (by_ind_hyp g sym_variant))
-        exact by_mp_ind g' variant
-    | Form.box ψ    =>
-        rw [is_free] at h1
-        intros g' variant s' is_neigh
-        exact generalize_not_free h1 M s' g (h2 s' is_neigh) g' variant
-    | Form.bind u ψ =>
-        simp only [is_free, Bool.and_eq_false_eq_eq_false_or_eq_false] at h1  
-        apply Or.elim h1
-        . intro u_is_v
-          simp only [bne, Bool.not_eq_false', beq_iff_eq] at u_is_v 
-          rw [u_is_v]
-          rw [u_is_v] at h2
-          intros g' variant1 g'' variant2
-          have variant3 := is_variant_trans variant2 variant1
-          exact h2 g'' variant3
-        . intro nfree_in_ψ
-          rw [bind_comm]
-          intros g' variant_u
-          exact generalize_not_free nfree_in_ψ M s g' (h2 g' variant_u)
+    rw [iff_sat]
+    apply Iff.intro
+    . intro h2
+      induction φ generalizing s g with
+      | bttm   => exact False.elim h2
+      | prop p =>
+          simp at h2
+          rw [Sat]
+          intros
+          exact h2
+      | svar x =>
+          simp only [is_free, beq_eq_false_iff_ne, ne_eq] at h1 
+          intro _ var
+          exact Eq.trans h2 (Eq.symm (var x h1))
+      | nom _ =>
+          intro _ _
+          exact h2
+      | impl ψ χ ih1 ih2 =>
+          simp only [Sat, is_free, Bool.or_eq_false_eq_eq_false_and_eq_false] at h1 h2 ⊢
+          intros g' var h
+          exact ih2 h1.right s g (h2 (ih1 h1.left s g' h g (is_variant_symm.mp var))) g' var
+      | box ψ ih    =>
+          rw [is_free] at h1
+          intros g' var s' is_neigh
+          exact ih h1 s' g (h2 s' is_neigh) g' var
+      | bind u ψ ih =>
+          simp only [is_free, Bool.and_eq_false_eq_eq_false_or_eq_false] at h1  
+          apply Or.elim h1
+          . intro u_is_v
+            simp only [bne, Bool.not_eq_false', beq_iff_eq] at u_is_v 
+            rw [u_is_v] at h2 ⊢
+            intros g' variant1 g'' variant2
+            have variant3 := is_variant_trans variant2 variant1
+            exact h2 g'' variant3
+          . intro nfree_in_ψ
+            rw [bind_comm]
+            intros g' variant_u
+            exact ih nfree_in_ψ s g' (h2 g' variant_u)
+    . intro h
+      exact h g (is_variant_refl v)
 
   theorem svar_substitution {φ : Form} {x y : SVAR} {M : Model} {s : M.W} {g g' : I M.W} 
   (h_subst : is_substable φ y x) (h_var : is_variant g g' x) (h_which_var : g' x = g y) :
   (((M,s,g) ⊨ φ[y // x]) ↔ (M,s,g') ⊨ φ) := by
     induction φ generalizing s g g' with
     | svar z   =>
-        apply Iff.intro
-        . intro h
-          by_cases z_x : z = x
-          . rw [show z[y//x] = y by rw[z_x, subst_svar, if_pos (Eq.refl x)], Sat] at h
-            rw [z_x, Sat, h_which_var]
-            exact h
-          . rw [show z[y//x] = z by rw[subst_svar, if_neg (Ne.symm (Ne.intro z_x))], Sat] at h
-            rw [Sat, ←(h_var z (Ne.symm z_x))]
-            exact h
-        . intro h
-          by_cases z_x : z = x
-          . rw [z_x, show x[y//x] = y by rw[subst_svar, if_pos (Eq.refl x)], Sat, ←h_which_var]
-            rw [Sat, z_x] at h
-            exact h
-          . rw [show z[y//x] = z by rw[subst_svar, if_neg (Ne.symm (Ne.intro z_x))], Sat]
-            rw [Sat, ←(h_var z (Ne.symm z_x))] at h
-            exact h
+        by_cases z_x : z = x
+        . rw [show z[y//x] = y by rw[z_x, subst_svar, if_pos (Eq.refl x)], Sat, z_x, Sat, h_which_var]
+        . rw [show z[y//x] = z by rw[subst_svar, if_neg (Ne.symm (Ne.intro z_x))], Sat, Sat, ←(h_var z (Ne.symm z_x))]
     | impl ψ χ ind_hyp_1 ind_hyp_2 =>
         simp only [is_substable, Bool.and_eq_true] at h_subst 
         have by_ind_hyp_1 := (@ind_hyp_1 s g) h_subst.left h_var h_which_var
         have by_ind_hyp_2 := (@ind_hyp_2 s g) h_subst.right h_var h_which_var
-        apply Iff.intro
-        . simp [-implication_disjunction]
-          intro h1 h2
-          exact by_ind_hyp_2.mp (h1 (by_ind_hyp_1.mpr h2))
-        . intro h1 h2
-          exact by_ind_hyp_2.mpr (h1 (by_ind_hyp_1.mp h2))
-    | box  ψ ind_hyp                   =>
-        apply Iff.intro
+        rw [subst_svar, Sat, Sat, by_ind_hyp_1, by_ind_hyp_2]
+    | box  ψ ind_hyp               =>
+        apply Iff.intro <;>
         . intro h1 s' s_R_s'
           have by_ind_hyp := (@ind_hyp s' g) h_subst h_var h_which_var
-          exact by_ind_hyp.mp (h1 s' s_R_s')
-        . intro h1 s' s_R_s'
-          have by_ind_hyp := (@ind_hyp s' g) h_subst h_var h_which_var
-          exact by_ind_hyp.mpr (h1 s' s_R_s')
+          first | exact by_ind_hyp.mp (h1 s' s_R_s') | exact by_ind_hyp.mpr (h1 s' s_R_s')
     | bind v ψ ind_hyp =>
         cases x_free : is_free x ψ with
         | true =>
             by_cases x_v : x = v
             . -- all x, ψ             and       x is free in ψ
-              have x_nfree : is_free x (all v, ψ) = false := by
-                simp only [is_free, x_v, bne_self_eq_false, Bool.false_and]
+              simp only [subst_svar, x_v, ite_true]
+              rw [←x_v]
+              have := @generalize_not_free x (all x, ψ) (by simp [is_free])
               apply Iff.intro
-              . intro h1
-                rw [(subst_notfree_var x_nfree).left] at h1
-                exact (generalize_not_free x_nfree M s g h1) g' (is_variant_symm.mp h_var)
-              . intro h1
-                conv => rhs ; rw [(subst_notfree_var x_nfree).left, ←x_v]
-                rw [←x_v] at h1
-                rw [←x_v] at x_nfree
-                exact (generalize_not_free x_nfree M s g' h1) g h_var
+              . intro h
+                have := this M s g
+                rw [iff_sat] at this
+                exact this.mp h g' (is_variant_symm.mp h_var)
+              . intro h
+                have := this M s g'
+                rw [iff_sat] at this
+                exact this.mp h g h_var
             . by_cases y_v : y = v
               . -- all y, ψ          and       x is free in ψ
                 -- contradiction with h_subst:
@@ -156,13 +133,16 @@ section Lemmas
                     exact (@ind_hyp s f f' h_subst f_var_f'_x t1).mpr t2
         | false =>
             have x_nfree : is_free x (all v, ψ) = false := preserve_notfree x v x_free
+            rw [(subst_notfree_var x_nfree).left]
             apply Iff.intro
             . intro h2 g'' v_variant
-              conv at h2 => rhs ; rw [(subst_notfree_var x_nfree).left]
-              exact ((generalize_not_free x_nfree M s g h2) g' (is_variant_symm.mp h_var)) g'' v_variant
+              have := generalize_not_free x_nfree M s g
+              rw [iff_sat] at this
+              exact ((this.mp h2) g' (is_variant_symm.mp h_var)) g'' v_variant
             . intro h2
-              conv => rhs ; rw [(subst_notfree_var x_nfree).left]
-              exact (generalize_not_free x_nfree M s g' h2) g h_var
+              have := generalize_not_free x_nfree M s g'
+              rw [iff_sat] at this
+              exact (this.mp h2) g h_var
     | _        => simp
 
     theorem nom_substitution {φ : Form} {x : SVAR} {i : NOM} {M : Model} {s : M.W} {g g' : I M.W}
@@ -192,18 +172,12 @@ section Lemmas
       | impl ψ χ ih_1 ih_2 =>
           have ih_1 := @ih_1 s g g' h_var h_which_var
           have ih_2 := @ih_2 s g g' h_var h_which_var
-          conv => lhs
-                  rhs
-                  rw [subst_nom]
           apply Iff.intro
           . intro h1 antecedent
             exact ih_2.mp (h1 (ih_1.mpr antecedent))
           . intro h2 antecedent
             exact ih_2.mpr (h2 (ih_1.mp antecedent))
       | box ψ ih =>
-          conv => lhs
-                  rhs
-                  rw [subst_nom]
           apply Iff.intro
           . intro h1 s' s_R_s'
             have ih := @ih s' g g' h_var h_which_var
@@ -212,9 +186,7 @@ section Lemmas
             have ih := @ih s' g g' h_var h_which_var
             exact ih.mpr (h2 s' s_R_s')
       | bind y ψ ih =>
-          conv => lhs
-                  rhs
-                  rw [subst_nom]
+          rw [subst_nom]
           by_cases x_y : x = y
           . rw [if_pos x_y]
             apply Iff.intro
@@ -321,16 +293,7 @@ section Lemmas
 end Lemmas
 
 section Tautologies
-  -- Todo: find a a proof of soundness for tautologies that doesn't rely
-  -- on Sat's decidability.  
-  noncomputable def model_val_func (M : Model) (s : M.W) (g : I M.W) : Form → Bool
-    | Form.bttm     => false
-    | Form.prop p   => ite ((M,s,g) ⊨ p) true false
-    | Form.nom  i   => ite ((M,s,g) ⊨ i) true false
-    | Form.svar x   => ite ((M,s,g) ⊨ x) true false
-    | Form.impl ψ χ => ¬(model_val_func M s g ψ = true) ∨ model_val_func M s g χ = true
-    | Form.box ψ    => ite ((M,s,g) ⊨ □ψ) true false
-    | Form.bind x ψ => ite ((M,s,g) ⊨ all x, ψ) true false
+  noncomputable def model_val_func (M : Model) (s : M.W) (g : I M.W) : Form → Bool := λ φ => ite ((M,s,g) ⊨ φ) true false
 
   noncomputable def model_eval (M : Model) (s : M.W) (g : I M.W) : Eval :=
       let f := model_val_func M s g
@@ -338,38 +301,11 @@ section Tautologies
       have p2 : ∀ φ ψ : Form, (f (φ ⟶ ψ) = true) ↔ (¬(f φ) = true ∨ (f ψ) = true) := λ φ ψ : Form => by simp [model_val_func] 
       ⟨f, p1, p2⟩
 
-  theorem model_eval_equiv (M : Model) (s : M.W) (g : I M.W) (f : Form → Bool) (h : f = model_val_func M s g) : ∀ φ : Form, ((M,s,g) ⊨ φ) ↔ f φ = true := by
-    intro φ
-    induction φ with
-    | impl _ _ ih1 ih2 =>
-        simp [h, model_val_func] at ih1
-        simp [h, model_val_func] at ih2
-        simp [h, model_val_func, ih1, ih2]
-    | box _ ih  =>
-        simp [h, model_val_func] at ih
-        simp [h, model_val_func, ih, -Sat]
-    | bind _ _ ih  =>
-        simp [h, model_val_func] at ih
-        simp [h, model_val_func, ih, -Sat]
-    | _  =>
-        simp [h, model_val_func]
-
   theorem taut_sound : Tautology φ → ⊨ φ := by
-    rw [contraposition (Tautology φ) (⊨ φ), Valid, Tautology]
-    conv =>
-      rw [negated_universal, negated_universal]
-      congr
-      . rhs; intro M; rw [negated_universal]; rhs; intro s; rw [negated_universal]; rhs; intro g; rw [←neg_sat]
-      . rhs; intro e; rw [Bool.not_eq_true, ←e_neg]
-    intro h
-    match h with
-    | ⟨M, s, g, hw⟩ =>
-        let eval := model_eval M s g
-        exists eval
-        have : (eval.f) = (model_val_func M s g) := by simp [model_eval]
-        have equiv := model_eval_equiv M s g eval.f this (∼φ)
-        rw [←equiv]
-        exact hw
+    intro h M s g
+    have := h (model_eval M s g)
+    simp [model_eval, model_val_func] at this
+    exact this
 end Tautologies
 
 theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
@@ -386,7 +322,10 @@ theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
 
   | ax_q1 _ _ p =>
       intro M s g h1 h2 g' variant
-      exact (h1 g' variant) ((generalize_not_free p M s g h2) g' variant)
+      have := generalize_not_free p M s g
+      rw [iff_sat] at this
+      have := ((this.mp h2) g' variant)
+      exact (h1 g' variant) this
 
   | ax_q2_svar _ x y h_subst =>
       intro (M : Model) (s : M.W) (g : I M.W)
@@ -447,7 +386,7 @@ theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
       intro M s _ g' _
       exact ih M s g'
 
-  | necess _ _ ih =>
+  | @necess _ _ ih =>
       intro M _ g s' _
       exact ih M s' g
 
@@ -464,7 +403,22 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
     have := (@WeakSoundness (conjunction Γ L⟶φ)) conseq
     exact ⟨L, this⟩
 
-#print axioms Soundness
-#check propext
-#check Classical.choice
-#check Quot.sound
+theorem Consistency : ⊬ ⊥ := by
+  intro habs
+  have bot_valid := WeakSoundness habs
+  let M : Model := ⟨ℕ, λ _ => λ _ => True, λ _ => ∅,  λ _ => 0⟩
+  have g : I (M.W) := λ _ => 0
+  have := bot_valid M 0 g
+  simp at this
+
+theorem npf_negpf : ⊢ (∼φ) → ⊬ φ := by
+  intro h habs
+  have := Proof.mp h habs
+  exact Consistency this
+
+theorem pos_npf_not : ⊢(◇φ) → ⊬(∼φ) := by
+  rw [Form.diamond]
+  intro h habs
+  have := Proof.necess habs
+  have := Proof.mp h this
+  exact Consistency this

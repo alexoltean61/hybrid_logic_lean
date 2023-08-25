@@ -9,7 +9,7 @@ inductive Proof : Form → Prop where
         Proof φ → Proof (all v, φ)
 
   -- if φ is a theorem, □ φ is a theorem 
-  | necess (φ : Form):
+  | necess {φ : Form}:
         Proof φ → Proof (□ φ)
 
   -- modus ponens:
@@ -46,19 +46,19 @@ inductive Proof : Form → Prop where
 
 def SyntacticConsequence (Γ : Set Form) (φ : Form) : Prop := ∃ L, Proof ((conjunction Γ L) ⟶ φ)  
 
-
 prefix:500 "⊢"  => Proof
 infix:500 "⊢"   => SyntacticConsequence
 
-notation "⊬" φ    => ¬ (Proof φ)
-notation Γ "⊬" φ  => ¬ (SyntacticConsequence Γ φ) 
+notation "⊬" φ    => ¬(Proof φ)
+notation Γ "⊬" φ  => ¬(SyntacticConsequence Γ φ)
 
 def Set.consistent (Γ : Set Form) := Γ ⊬ ⊥
 
-def Set.MCS (Γ : Set Form) := Γ.consistent ∧ (∀ φ : Form, (¬φ ∈ Γ) → (Γ ∪ {φ}) ⊢ ⊥)
+def Set.MCS (Γ : Set Form) := Γ.consistent ∧ (∀ {φ : Form}, (¬φ ∈ Γ) → ((Γ ∪ {φ}) ⊢ ⊥))
 
 def Set.witnessed (Γ : Set Form) : Prop := ∀ {φ : Form},
   φ ∈ Γ → 
     match φ with 
-      | ex x, ψ => ∃ i : NOM, ((ex x, ψ) ⟶ ψ[i // x]) ∈ Γ 
+--      | ex x, ψ => ∃ i : NOM, ((ex x, ψ) ⟶ ψ[i // x]) ∈ Γ
+      | ex x, ψ => ∃ i : NOM, ψ[i // x] ∈ Γ 
       | _   => φ ∈ Γ

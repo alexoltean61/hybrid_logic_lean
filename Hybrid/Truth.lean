@@ -1,5 +1,6 @@
 import Hybrid.Form
 import Hybrid.Util
+import Hybrid.Substitutions
 
 section Definitions
 
@@ -36,7 +37,11 @@ section Definitions
 
   notation "(" M "," s "," g ")" "⊨" φ => Sat M s g φ
   notation "(" M "," s "," g ")" "⊭" φ => ¬ Sat M s g φ
-  
+
+  def truths_set (M : Model) (s : M.W) (g : I M.W) : Set Form := {φ | (M,s,g) ⊨ φ}
+
+  theorem sat_iff_mem : ((M,s,g) ⊨ φ) ↔ (φ ∈ truths_set M s g) := by simp [truths_set]
+
   theorem neg_sat : ((M,s,g) ⊨ ∼φ) ↔ ((M,s,g) ⊭ φ) := by
     simp only [Sat, or_false]
   theorem and_sat : ((M,s,g) ⊨ φ ⋀ ψ) ↔ (((M,s,g) ⊨ φ) ∧ (M,s,g) ⊨ ψ) := by
@@ -47,6 +52,13 @@ section Definitions
     simp
   theorem ex_sat  : ((M,s,g) ⊨ ex x, φ) ↔ (∃ g' : I M.W, (is_variant g' g x) ∧ ((M,s,g') ⊨ φ)) := by
     simp [-is_variant]
+  theorem iff_sat : ((M,s,g) ⊨ (φ ⟷ ψ)) ↔ (((M,s,g) ⊨ φ) ↔ (M,s,g) ⊨ ψ) := by
+    rw [Form.iff, and_sat, Sat, Sat]
+    apply Iff.intro
+    . intro ⟨h1, h2⟩
+      apply Iff.intro <;> assumption
+    . intro h1
+      apply And.intro <;> simp [h1]
 
   @[simp]
   def Valid (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
@@ -183,4 +195,135 @@ section Theorems
 
     end Satisfaction
 
+  theorem D_help {Γ : Set Form} : ((M,s,g)⊨Γ ∪ {φ}) ↔ (((M,s,g)⊨Γ) ∧ (M,s,g) ⊨ {φ}) := by
+    apply Iff.intro
+    . intro h
+      rw [Sat_Set] at h
+      apply And.intro <;>
+      . intro χ mem; apply h; simp at mem; simp [mem]
+    . intro ⟨hl, hr⟩ 
+      intro χ mem; simp at mem
+      apply Or.elim mem <;> {
+        intros; first | {apply hl; assumption} | {apply hr; assumption}
+      }
+
+  theorem SemanticDeduction {Γ : Set Form} : (Γ ⊨ (φ ⟶ ψ)) ↔ ((Γ ∪ {φ}) ⊨ ψ) := by
+    apply Iff.intro <;> {
+      intro h M s g sat_set
+      simp only [Sat]
+      try (intro sat_φ;
+            have sat_φ : (M,s,g) ⊨ {φ} := by simp only [Sat_Set, Set.mem_singleton_iff, forall_eq,
+              sat_φ])
+      try (have := h M s g (D_help.mpr ⟨sat_set, sat_φ⟩))
+      try (have ⟨sat_l, sat_r⟩ := D_help.mp sat_set;
+            simp only [Sat_Set, Set.mem_singleton_iff, forall_eq] at sat_r ;
+            have := (h M s g sat_l) sat_r)
+      assumption
+    }
+
 end Theorems
+
+def Model.odd_noms (M : Model) : Model where
+  W := M.W
+  R := M.R
+--  R := λ Γ => λ Δ => Γ.MCS ∧ Δ.MCS ∧ (∀ φ : Form, □φ ∈ Γ → φ ∈ Δ)
+  Vₚ:= M.Vₚ
+  Vₙ:= λ i => M.Vₙ ⟨(i.letter-1)/2⟩
+
+def Model.odd_noms_inv (M : Model) : Model where
+  W := M.W
+  R := M.R
+--  R := λ Γ => λ Δ => Γ.MCS ∧ Δ.MCS ∧ (∀ φ : Form, □φ ∈ Γ → φ ∈ Δ)
+  Vₚ:= M.Vₚ
+  Vₙ:= λ i => M.Vₙ ⟨i.letter*2+1⟩
+
+theorem sat_odd_noms {φ : Form} : ((M,s,g) ⊨ φ) ↔ ((M.odd_noms,s,g) ⊨ φ.odd_noms) := by
+  induction φ generalizing s g with
+  | nom i =>
+      simp [odd_nom, Model.odd_noms]
+  | impl φ ψ ih1 ih2 =>
+      rw [odd_impl, Sat, Sat, ih1, ih2]
+  | box φ ih =>
+      rw [odd_box, Sat, Sat]
+      apply Iff.intro
+      . intro h1 s' h2
+        rw [←@ih s' g]
+        exact h1 s' h2
+      . intro h1 s' h2
+        rw [@ih s' g]
+        exact h1 s' h2
+  | bind x φ ih =>
+      rw [odd_bind, Sat, Sat]
+      apply Iff.intro
+      . intro h1 g' h2
+        rw [←@ih s g']
+        exact h1 g' h2
+      . intro h1 g' h2
+        rw [@ih s g']
+        exact h1 g' h2 
+  | _ => simp [Form.odd_noms, Model.odd_noms] 
+
+theorem sat_odd_noms' {φ : Form} : ((M,s,g) ⊨ φ.odd_noms) ↔ ((M.odd_noms_inv,s,g) ⊨ φ) := by
+--  conv => rhs; rw [sat_odd_noms]
+  induction φ generalizing s g with
+  | nom i =>
+      simp [odd_nom, Model.odd_noms, Model.odd_noms_inv, Nat.mul_comm]
+  | impl φ ψ ih1 ih2 =>
+      rw [odd_impl, Sat, Sat, ih1, ih2]
+  | box φ ih =>
+      rw [odd_box, Sat, Sat]
+      apply Iff.intro
+      . intro h1 s' h2
+        rw [←@ih s' g]
+        exact h1 s' h2
+      . intro h1 s' h2
+        rw [@ih s' g]
+        exact h1 s' h2
+  | bind x φ ih =>
+      rw [odd_bind, Sat, Sat]
+      apply Iff.intro
+      . intro h1 g' h2
+        rw [←@ih s g']
+        exact h1 g' h2
+      . intro h1 g' h2
+        rw [@ih s g']
+        exact h1 g' h2 
+  | _ => simp [Form.odd_noms, Model.odd_noms, Model.odd_noms_inv]
+
+theorem testtt {Γ : Set Form} : ((M,s,g) ⊨ Γ) ↔ ((M.odd_noms,s,g) ⊨ Γ.odd_noms) := by
+  apply Iff.intro
+  . intro h φ_odd φ_odd_prop
+    have ⟨φ, mem, is_odd⟩ := φ_odd_prop
+    rw [←is_odd, ←sat_odd_noms]
+    exact h φ mem
+  . intro h φ mem
+    rw [sat_odd_noms]
+    have φ_odd_mem : φ.odd_noms ∈ Γ.odd_noms := by exists φ
+    exact h φ.odd_noms φ_odd_mem
+
+theorem testtt' {Γ : Set Form} : ((M,s,g) ⊨ Γ.odd_noms) ↔ ((M.odd_noms_inv,s,g) ⊨ Γ) := by
+  apply Iff.intro
+  . intro h φ mem
+    rw [←sat_odd_noms']
+    have φ_odd_mem : φ.odd_noms ∈ Γ.odd_noms := by exists φ
+    exact h φ.odd_noms φ_odd_mem
+  . intro h φ_odd φ_odd_prop
+    have ⟨φ, mem, is_odd⟩ := φ_odd_prop
+    rw [←is_odd, sat_odd_noms']
+    exact h φ mem
+
+theorem plang : Γ ⊨ φ ↔ Γ.odd_noms ⊨ φ.odd_noms := by
+  apply Iff.intro
+  . intro h M s g sat_odd_set
+    rw [testtt'] at sat_odd_set
+    have := h M.odd_noms_inv s g sat_odd_set
+    rw [sat_odd_noms']
+    exact this
+  . intro h M s g sat_set
+    rw [testtt] at sat_set
+    have := h M.odd_noms s g sat_set
+    rw [sat_odd_noms]
+    exact this
+
+
+#print axioms plang

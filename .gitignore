@@ -1,0 +1,5 @@
+/lake-packages
+/lean_packages
+/build
+/Hybrid/Test.lean
+*.DS_Store

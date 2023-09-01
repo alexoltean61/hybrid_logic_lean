@@ -5,11 +5,11 @@ import Hybrid.FormCountable
 open Classical
 
 -- First, we define how to obtain Γᵢ₊₁ from Γᵢ, given a formula φ: 
-def lindenbaum_next (Γ : Set Form) (φ : Form) : Set Form :=
-  if (Γ ∪ {φ}).consistent then
+def lindenbaum_next (Γ : Set (Form N)) (φ : Form N) : Set (Form N) :=
+  if consistent (Γ ∪ {φ}) then
     match φ with
     | ex x, ψ =>
-        if c : ∃ i : NOM, all_nocc i (Γ ∪ {φ}) then
+        if c : ∃ i : NOM N, all_nocc i (Γ ∪ {φ}) then
           Γ ∪ {φ} ∪ {ψ[c.choose // x]}
         else
           Γ ∪ {φ}
@@ -22,7 +22,7 @@ def lindenbaum_next (Γ : Set Form) (φ : Form) : Set Form :=
 --    Γ₀ = Γ .
 -- However, in Lean it's much tidier to enumerate from 0 (φ₀, φ₁, ...), so
 --    Γ₀ = Γ ∪ {φ₀} if it is consistent and Γ₀ = Γ otherwise.
-def lindenbaum_family (enum : Nat → Form) (Γ : Set Form) : Nat → Set Form 
+def lindenbaum_family (enum : Nat → Form N) (Γ : Set (Form N)) : Nat → Set (Form N) 
 | .zero   => lindenbaum_next Γ (enum 0)
 | .succ n =>
     let prev_set := lindenbaum_family enum Γ n
@@ -30,15 +30,15 @@ def lindenbaum_family (enum : Nat → Form) (Γ : Set Form) : Nat → Set Form
 
 notation Γ "(" i "," e ")" => lindenbaum_family e Γ i    
 
-def LindenbaumMCS (enum : Nat → Form) (Γ : Set Form) (_ : Γ.consistent) : Set Form :=
+def LindenbaumMCS (enum : Nat → Form N) (Γ : Set (Form N)) (_ : consistent Γ) : Set (Form N) :=
     {φ | ∃ i : Nat, φ ∈ Γ (i, enum)}
 
 -- Lemma: All Γᵢ belong to LindenbaumMCS Γ
-lemma all_sets_in_family{enum : ℕ → Form} {Γ : Set Form} {c : Γ.consistent} : ∀ n, Γ (n, enum) ⊆ LindenbaumMCS enum Γ c := by
+lemma all_sets_in_family{enum : ℕ → Form N} {Γ : Set (Form N)} {c : consistent Γ} : ∀ n, Γ (n, enum) ⊆ LindenbaumMCS enum Γ c := by
   intro i φ h
   exists i
 
-lemma all_sets_in_family_tollens {enum : ℕ → Form} {Γ : Set Form} {c : Γ.consistent} : φ ∉ (LindenbaumMCS enum Γ c) → ∀ n, φ ∉ Γ (n, enum) := by
+lemma all_sets_in_family_tollens {enum : ℕ → Form N} {Γ : Set (Form N)} {c : consistent Γ} : φ ∉ (LindenbaumMCS enum Γ c) → ∀ n, φ ∉ Γ (n, enum) := by
   rw [contraposition, not_not, not_forall]
   intro h
   let ⟨i, hi⟩ := h
@@ -46,7 +46,7 @@ lemma all_sets_in_family_tollens {enum : ℕ → Form} {Γ : Set Form} {c : Γ.c
   exact all_sets_in_family i hi 
 
 -- Lemma: If Γ is consistent, then for all φ, lindenbaum_next Γ φ is consistent
-lemma consistent_lindenbaum_next (Γ : Set Form) (hc : Γ.consistent) (φ : Form) : (lindenbaum_next Γ φ).consistent := by
+lemma consistent_lindenbaum_next (Γ : Set (Form N)) (hc : consistent Γ) (φ : Form N) : consistent (lindenbaum_next Γ φ) := by
   rw [lindenbaum_next]
   split
   . split
@@ -57,8 +57,9 @@ lemma consistent_lindenbaum_next (Γ : Set Form) (hc : Γ.consistent) (φ : Form
         have not1 : i = Exists.choose hnom := by simp
         have i_sat := Exists.choose_spec hnom
         have not2 : (ex x, ψ) = ((all x, ψ⟶⊥)⟶⊥) := by simp
-        rw [←not1, ←not2, Set.consistent, ←Proof.Deduction, SyntacticConsequence]
-        intro ⟨L, habs⟩
+        rw [←not1, ←not2, consistent]
+        intro hyp
+        have ⟨L, habs⟩ := Proof.Deduction.mpr hyp
         let χ := conjunction (Γ ∪ {ex x, ψ}) L
         have not3 : χ = conjunction (Γ ∪ {ex x, ψ}) L := by simp
         rw [←not3] at habs
@@ -77,7 +78,7 @@ lemma consistent_lindenbaum_next (Γ : Set Form) (hc : Γ.consistent) (φ : Form
         rw [nom_subst_nocc nocc1, subst_collect_all_nocc nocc2] at habs
         have := Proof.ax_q1 χ (ψ[y//x]⟶⊥) (notoccurs_notfree nocc0)
         have habs := Proof.mp this habs
-        have habs : ∃ L, ⊢(conjunction (Γ ∪ {ex x, ψ}) L⟶all y, ψ[y//x]⟶⊥) := ⟨L, habs⟩
+        have habs : Σ L, ⊢(conjunction (Γ ∪ {ex x, ψ}) L⟶all y, ψ[y//x]⟶⊥) := ⟨L, habs⟩
         rw [←SyntacticConsequence, ←Form.neg] at habs
         have : ⊢((all y, ∼(ψ[y//x])) ⟶ (all x, ∼ψ)) := by
           apply Proof.iff_mpr
@@ -91,7 +92,7 @@ lemma consistent_lindenbaum_next (Γ : Set Form) (hc : Γ.consistent) (φ : Form
         have habs := Proof.Γ_mp this habs 
         have : (Γ ∪ {ex x, ψ}) ⊢ (ex x, ψ) := by apply Proof.Γ_premise; simp
         have := Proof.Γ_mp this habs
-        contradiction
+        exact h this
       . assumption
     . assumption
   . assumption
@@ -99,7 +100,7 @@ lemma consistent_lindenbaum_next (Γ : Set Form) (hc : Γ.consistent) (φ : Form
 
 -- Lemma: If you can consistently extend (lindenbaum_next Γ φ) with φ, then
 --    φ already belongs to (lindenbaum_next Γ φ)
-lemma maximal_lindenbaum_next {Γ : Set Form} (hc : ((lindenbaum_next Γ φ) ∪ {φ}).consistent) : φ ∈ lindenbaum_next Γ φ := by
+lemma maximal_lindenbaum_next {Γ : Set (Form N)} (hc : consistent ((lindenbaum_next Γ φ) ∪ {φ})) : φ ∈ lindenbaum_next Γ φ := by
   revert hc
   rw [lindenbaum_next]
   split
@@ -113,7 +114,7 @@ lemma maximal_lindenbaum_next {Γ : Set Form} (hc : ((lindenbaum_next Γ φ) ∪
 --
 
 -- Lemma: If Γ is consistent, then all Γᵢ are consistent.
-lemma consistent_family {Γ : Set Form} (e : ℕ → Form) (c : Γ.consistent) : ∀ n, (Γ (n, e)).consistent := by
+lemma consistent_family {Γ : Set (Form N)} (e : ℕ → Form N) (c : consistent Γ) : ∀ n, consistent (Γ (n, e)) := by
   intro n
   induction n <;> (
       simp only [lindenbaum_family]
@@ -124,8 +125,8 @@ lemma consistent_family {Γ : Set Form} (e : ℕ → Form) (c : Γ.consistent) :
 -- Lemma: If φ doesn't belong to the set in the family corresponding to its place in the enumeration,
 --     (i.e., φ ∉ Γᵢ, where i = f φ),
 --    then Γᵢ ∪ {φ} must be inconsistent.
-lemma maximal_family {Γ : Set Form} {f : Form → ℕ} (f_inj : f.Injective) {e : ℕ → Form} (e_inv : e = f.invFun) :
-    ¬φ ∈ Γ (f φ, e) → ¬(Γ (f φ, e) ∪ {φ}).consistent := by
+lemma maximal_family {Γ : Set (Form N)} {f : Form N → ℕ} (f_inj : f.Injective) {e : ℕ → Form N} (e_inv : e = f.invFun) :
+    ¬φ ∈ Γ (f φ, e) → ¬consistent (Γ (f φ, e) ∪ {φ}) := by
     rw [contraposition, not_not, not_not]
     unfold lindenbaum_family
     cases heq : f φ with
@@ -185,7 +186,7 @@ lemma Γ_in_family : Γ ⊆ Γ (i, e) := by
 
 -- Now we want to show that Γ' = LindenbaumMCS e Γ is consistent.
 --
--- (f is an injection Form → ℕ  ; e is its (left) inverse ℕ → Form)
+-- (f is an injection Form → ℕ  ; e is its (left) inverse ℕ → Form N)
 --
 -- Assume Γ' is inconsistent.
 --  That means that there is list of elements L of that set
@@ -223,7 +224,7 @@ lemma incl_insert {A B : Set α} (h1 : A ⊆ B) (h2 : x ∈ B) : (A ∪ {x}) ⊆
 -- If φ is a formula that belongs to the infinite union Γ' = LindenbaumMCS e Γ,
 --    then φ must belong to some Γᵢ from Γ'.
 -- More specifically, i = f φ; i.e. the place of φ in the enumeration.
-lemma at_finite_step {Γ : Set Form} (c : Γ.consistent) (f : Form → ℕ) (f_inj : f.Injective) (e : ℕ → Form) (e_inv : e = f.invFun) :
+lemma at_finite_step {Γ : Set (Form N)} (c : consistent Γ) (f : Form N → ℕ) (f_inj : f.Injective) (e : ℕ → Form N) (e_inv : e = f.invFun) :
     φ ∈ LindenbaumMCS e Γ c → φ ∈ Γ (f φ, e) := by
   rw [contraposition]
   simp only [LindenbaumMCS, Set.mem_setOf_eq, not_exists, not_not]
@@ -235,15 +236,14 @@ lemma at_finite_step {Γ : Set Form} (c : Γ.consistent) (f : Form → ℕ) (f_i
     have order := Nat.le_of_lt order
     have incl := incl_insert ((@increasing_family (f φ)) order) habs
     have n_consistent := consistent_family e c n
-    have phi_inconsistent := maximal_family f_inj e_inv h
+    have ⟨phi_inconsistent, _⟩ := not_forall.mp (maximal_family f_inj e_inv h)
     clear h
-    simp only [Set.consistent, not_not] at n_consistent phi_inconsistent
     have n_inconsistent := Proof.increasing_consequence phi_inconsistent incl
     exact n_consistent n_inconsistent
 
 -- Given a finite list of elements in (LindenbaumMCS e Γ c), all elements of that list
 --    occur in some Γᵢ that makes up the infinite union.
-lemma list_at_finite_step {Γ : Set Form} {c : Γ.consistent} (f : Form → ℕ) (f_inj : f.Injective) (e : ℕ → Form) (e_inv : e = f.invFun) (L : List (LindenbaumMCS e Γ c)) :
+lemma list_at_finite_step {Γ : Set (Form N)} {c : consistent Γ} (f : Form N → ℕ) (f_inj : f.Injective) (e : ℕ → Form N) (e_inv : e = f.invFun) (L : List (LindenbaumMCS e Γ c)) :
     {↑φ | φ ∈ L} ⊆ (Γ (L.max_form f, e)) := by
     intro φ_val hmem
     simp only [Set.mem_setOf_eq] at hmem
@@ -255,33 +255,33 @@ lemma list_at_finite_step {Γ : Set Form} {c : Γ.consistent} (f : Form → ℕ)
     have := L.max_is_max f φ φ_property
     exact increasing_family this φ_in_own_set
 
-lemma LindenbaumConsistent {Γ : Set Form} (c : Γ.consistent) {f : Form → ℕ} (f_inj : f.Injective) {e : ℕ → Form} (e_inv : e = f.invFun) :
-  (LindenbaumMCS e Γ c).consistent := by
-  rw [←@not_not (Set.consistent (LindenbaumMCS e Γ c))]
+lemma LindenbaumConsistent {Γ : Set (Form N)} (c : consistent Γ) {f : Form N → ℕ} (f_inj : f.Injective) {e : ℕ → Form N} (e_inv : e = f.invFun) :
+  consistent (LindenbaumMCS e Γ c) := by
+  rw [←@not_not (consistent (LindenbaumMCS e Γ c))]
   intro habs
-  rw [Set.consistent, not_not, SyntacticConsequence] at habs
-  let ⟨L, L_incons⟩ := habs
+  let ⟨⟨L, L_incons⟩, _⟩ := not_forall.mp habs
   clear habs
   let ⟨L', conj_L'⟩ := conj_incl_linden L (list_at_finite_step f f_inj e e_inv L)
   rw [conj_L'] at L_incons
   clear conj_L'
   have : ((⊢(conjunction (Γ(L.max_form f, e)) L'⟶⊥) → (Γ(L.max_form f, e)) ⊢ ⊥)) := by intro h; simp [SyntacticConsequence]; exists L'
-  have := this L_incons
-  have := consistent_family e c (L.max_form f)
-  contradiction
+  exact consistent_family e c (L.max_form f) (this L_incons)
 
-lemma LindenbaumMaximal {Γ : Set Form} (c : Γ.consistent) {f : Form → ℕ} (f_inj : f.Injective) {e : ℕ → Form} (e_inv : e = f.invFun) :
-  ∀ φ, φ ∉ (LindenbaumMCS e Γ c) → ((LindenbaumMCS e Γ c) ∪ {φ}) ⊢ ⊥ := by
+lemma LindenbaumMaximal {Γ : Set (Form N)} (c : consistent Γ) {f : Form N → ℕ} (f_inj : f.Injective) {e : ℕ → Form N} (e_inv : e = f.invFun) :
+  ∀ φ, φ ∉ (LindenbaumMCS e Γ c) → ¬consistent ((LindenbaumMCS e Γ c) ∪ {φ}) := by
   intro φ not_mem
   have := all_sets_in_family_tollens not_mem (f φ)
-  have := maximal_family f_inj e_inv this
-  simp only [Set.consistent, not_not, ←Proof.Deduction] at this ⊢
-  apply Proof.increasing_consequence this
+  have ⟨pf_bot, _⟩ := not_forall.mp (maximal_family f_inj e_inv this)
+  intro habs
+  apply habs
+  apply Proof.Deduction.mp
+  apply Proof.increasing_consequence
+  exact Proof.Deduction.mpr pf_bot
   apply all_sets_in_family
 
-theorem RegularLindenbaumLemma : ∀ Γ : Set Form, Γ.consistent → ∃ Γ' : Set Form, Γ ⊆ Γ' ∧ Γ'.MCS := by
+theorem RegularLindenbaumLemma : ∀ Γ : Set (Form N), consistent Γ → ∃ Γ' : Set (Form N), Γ ⊆ Γ' ∧ MCS Γ' := by
   intro Γ cons
-  let ⟨f, f_inj⟩ := exists_injective_nat Form
+  let ⟨f, f_inj⟩ := exists_injective_nat (Form N)
   let enum       := f.invFun
   let Γ' := LindenbaumMCS enum Γ cons
   have enum_inv : enum = f.invFun := rfl
@@ -290,20 +290,20 @@ theorem RegularLindenbaumLemma : ∀ Γ : Set Form, Γ.consistent → ∃ Γ' : 
   . -- Γ is included in Γ'
     let Γ₀ := Γ (0, enum)
     have Γ_in_Γ₀ : Γ ⊆ Γ₀ := Γ_in_family
-    have Γ₀_in_family := @all_sets_in_family enum Γ cons 0
+    have Γ₀_in_family := @all_sets_in_family N enum Γ cons 0
     rw [show LindenbaumMCS enum Γ cons = Γ' by simp, show Γ (0, enum) = Γ₀ by simp] at Γ₀_in_family
     intro _ φ_in_Γ
     exact Γ₀_in_family (Γ_in_Γ₀ φ_in_Γ)
-  . rw [Set.MCS]
+  . rw [MCS]
     apply And.intro
     . exact LindenbaumConsistent cons f_inj enum_inv
     . intro φ
       exact LindenbaumMaximal cons f_inj enum_inv φ
 
-def Set.enough_noms (Γ : Set Form) := (∃ i, all_nocc i Γ) ∧ ∀ (e : ℕ → Form) (n : ℕ), ∃ i, all_nocc i (Γ (n, e))
+def enough_noms (Γ : Set (Form N)) := (∃ i, all_nocc i Γ) ∧ ∀ (e : ℕ → Form N) (n : ℕ), ∃ i, all_nocc i (Γ (n, e))
 
-lemma LindenbaumWitnessed {Γ : Set Form} (c : Γ.consistent) {f : Form → ℕ} (f_inj : f.Injective) {e : ℕ → Form} (e_inv : e = f.invFun)
-    (h : Γ.enough_noms) : (LindenbaumMCS e Γ c).witnessed := by
+lemma LindenbaumWitnessed {Γ : Set (Form N)} (c : consistent Γ) {f : Form N → ℕ} (f_inj : f.Injective) {e : ℕ → Form N} (e_inv : e = f.invFun)
+    (h : enough_noms Γ) : witnessed (LindenbaumMCS e Γ c) := by
     intro φ φ_mem
     split
     . next φ x ψ =>
@@ -330,4 +330,4 @@ lemma LindenbaumWitnessed {Γ : Set Form} (c : Γ.consistent) {f : Form → ℕ}
 
     . assumption
 
-theorem ExtendedLindenbaumLemma : ∀ Γ : Set Form, Γ.consistent → ∃ Γ' : Set Form, Γ.odd_noms ⊆ Γ' ∧ Γ'.MCS ∧ Γ'.witnessed := by admit
+theorem ExtendedLindenbaumLemma : ∀ Γ : Set (Form TotalSet), consistent Γ → ∃ Γ' : Set (Form TotalSet), Γ.odd_noms ⊆ Γ' ∧ MCS Γ' ∧ witnessed Γ' := by admit

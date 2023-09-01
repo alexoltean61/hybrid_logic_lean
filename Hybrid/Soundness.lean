@@ -49,8 +49,7 @@ section Lemmas
     . intro h
       exact h g (is_variant_refl v)
 
-  theorem svar_substitution {φ : Form} {x y : SVAR} {M : Model} {s : M.W} {g g' : I M.W} 
-  (h_subst : is_substable φ y x) (h_var : is_variant g g' x) (h_which_var : g' x = g y) :
+  theorem svar_substitution {φ : Form N} {g g' : I M.W} (h_subst : is_substable φ y x) (h_var : is_variant g g' x) (h_which_var : g' x = g y) :
   (((M,s,g) ⊨ φ[y // x]) ↔ (M,s,g') ⊨ φ) := by
     induction φ generalizing s g g' with
     | svar z   =>
@@ -74,7 +73,7 @@ section Lemmas
             . -- all x, ψ             and       x is free in ψ
               simp only [subst_svar, x_v, ite_true]
               rw [←x_v]
-              have := @generalize_not_free x (all x, ψ) (by simp [is_free])
+              have := @generalize_not_free x N (all x, ψ) (by simp [is_free])
               apply Iff.intro
               . intro h
                 have := this M s g
@@ -145,7 +144,7 @@ section Lemmas
               exact (this.mp h2) g h_var
     | _        => simp
 
-    theorem nom_substitution {φ : Form} {x : SVAR} {i : NOM} {M : Model} {s : M.W} {g g' : I M.W}
+    theorem nom_substitution {φ : Form N} {x : SVAR} {i : NOM N} {g g' : I M.W}
     (h_var : is_variant g g' x) (h_which_var : g' x = M.Vₙ i) :
     (((M,s,g) ⊨ φ[i // x]) ↔ ((M,s,g') ⊨ φ)) := by
       induction φ generalizing s g g' with
@@ -223,8 +222,7 @@ section Lemmas
                   exact (@ih s f f' (is_variant_symm.mp f'_var_f_x) t1).mpr t2
       | _ => simp
 
-  theorem sat_iterated_nec {φ : Form} {n : Nat} {M : Model} {s : M.W} {g : I M.W} :
-  ((M,s,g) ⊨ iterate_nec n φ) ↔ (∀ s' : M.W, (path M.R s s' n) → (M,s',g) ⊨ φ) := by
+  theorem sat_iterated_nec : ((M,s,g) ⊨ iterate_nec n φ) ↔ (∀ s' : M.W, (path M.R s s' n) → (M,s',g) ⊨ φ) := by
     induction n generalizing φ with
     | zero   =>
         rw [iterate_nec, iterate_nec.loop]
@@ -250,8 +248,7 @@ section Lemmas
           have ex_path1 : path M.R s s' (Nat.succ m) := ⟨i, i_R_s', ex_path2⟩
           exact h2 s' ex_path1
 
-  theorem sat_iterated_pos {φ : Form} {n : Nat} {M : Model} {s : M.W} {g : I M.W} :
-  ((M,s,g) ⊨ iterate_pos n φ) ↔ (∃ s' : M.W, (path M.R s s' n) ∧ (M,s',g) ⊨ φ) := by
+  theorem sat_iterated_pos : ((M,s,g) ⊨ iterate_pos n φ) ↔ (∃ s' : M.W, (path M.R s s' n) ∧ (M,s',g) ⊨ φ) := by
     induction n generalizing φ with
     | zero   =>
         rw [iterate_pos, iterate_pos.loop]
@@ -286,19 +283,19 @@ section Lemmas
               have premise : ∃ s'', path M.R s s'' m ∧ (M,s'',g)⊨◇ φ := ⟨s'', ⟨ex_path2, s''_pos_φ⟩⟩
               exact ih.mpr premise
 
-  theorem svar_unique_state {v : SVAR} {M : Model} {s : M.W} {g : I M.W} :
+  theorem svar_unique_state {v : SVAR} :
   (((M,s,g) ⊨ Form.svar v) → (∀ r : M.W, ((M,r,g) ⊨ Form.svar v) → r = s)) := by
     intro h1 r h2
     rw [h2, h1]
 end Lemmas
 
 section Tautologies
-  noncomputable def model_val_func (M : Model) (s : M.W) (g : I M.W) : Form → Bool := λ φ => ite ((M,s,g) ⊨ φ) true false
+  noncomputable def model_val_func (M : Model N) (s : M.W) (g : I M.W) : Form N → Bool := λ φ => ite ((M,s,g) ⊨ φ) true false
 
-  noncomputable def model_eval (M : Model) (s : M.W) (g : I M.W) : Eval :=
+  noncomputable def model_eval (M : Model N) (s : M.W) (g : I M.W) : Eval N :=
       let f := model_val_func M s g
       have p1 : f ⊥ = false := by simp [model_val_func]
-      have p2 : ∀ φ ψ : Form, (f (φ ⟶ ψ) = true) ↔ (¬(f φ) = true ∨ (f ψ) = true) := λ φ ψ : Form => by simp [model_val_func] 
+      have p2 : ∀ φ ψ : Form N, (f (φ ⟶ ψ) = true) ↔ (¬(f φ) = true ∨ (f ψ) = true) := λ φ ψ : Form N => by simp [model_val_func] 
       ⟨f, p1, p2⟩
 
   theorem taut_sound : Tautology φ → ⊨ φ := by
@@ -315,7 +312,7 @@ theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
   | tautology h => exact taut_sound h
 
   | ax_k =>
-      intro (M : Model) (s : M.W) (g : I M.W)
+      intro M s g
       unfold Sat
       intro nec_impl nec_phi (s' : M.W) (rel : M.R s s')
       exact (nec_impl s' rel) (nec_phi  s' rel)
@@ -328,7 +325,7 @@ theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
       exact (h1 g' variant) this
 
   | ax_q2_svar _ x y h_subst =>
-      intro (M : Model) (s : M.W) (g : I M.W)
+      intro M s g
       intro h
       -- let's build an explicit x-variant of g, named g'
       let g' : I M.W := λ v => ite (v ≠ x) (g v) (g y)
@@ -342,7 +339,7 @@ theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
       exact h g' (is_variant_symm.mp h_var)
   
   | ax_q2_nom _ x i =>
-      intro (M : Model) (s : M.W) (g : I M.W)
+      intro M s g
       intro h
       let g' : I M.W := λ v => ite (v ≠ x) (g v) (M.Vₙ i)
       have h_var : is_variant g g' x := by
@@ -353,7 +350,7 @@ theorem WeakSoundness : (⊢ φ) → (⊨ φ) := by
       exact h g' (is_variant_symm.mp h_var)
   
   | ax_name v =>
-      intro (M : Model) (s : M.W) (g : I M.W)
+      intro M s g
       rw [ex_sat]
       let g' : I M.W := λ x => ite (v = x) s (g x)
       apply Exists.intro
@@ -400,16 +397,17 @@ theorem Soundness : (Γ ⊢ φ) → (Γ ⊨ φ) := by
   apply SetEntailment
   match h with
   | ⟨L, conseq⟩ =>
-    have := (@WeakSoundness (conjunction Γ L⟶φ)) conseq
-    exact ⟨L, this⟩
+    exists L
+    apply WeakSoundness
+    assumption
 
-theorem Consistency : ⊬ ⊥ := by
-  intro habs
+theorem Consistency : ∀ {N : Set ℕ}, ⊬ (@Form.bttm N) := by
+  intro N habs
   have bot_valid := WeakSoundness habs
-  let M : Model := ⟨ℕ, λ _ => λ _ => True, λ _ => ∅,  λ _ => 0⟩
+  let M : Model N := ⟨ℕ, λ _ => λ _ => True, λ _ => ∅,  λ _ => 0⟩
   have g : I (M.W) := λ _ => 0
   have := bot_valid M 0 g
-  simp at this
+  exact this
 
 theorem npf_negpf : ⊢ (∼φ) → ⊬ φ := by
   intro h habs

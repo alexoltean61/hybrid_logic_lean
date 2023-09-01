@@ -2,7 +2,7 @@ import Hybrid.Soundness
 import Hybrid.Substitutions
 import Hybrid.ProofUtils
 
-def Form.replace_bound : Form → SVAR → Form
+def Form.replace_bound : Form N → SVAR → Form N
   | (all z, φ), x =>
         if z = x then
           let y := (φ.replace_bound x).new_var + x.letter + 1
@@ -27,14 +27,14 @@ decreasing_by
 theorem replace_neg : (∼φ).replace_bound x = ∼(φ.replace_bound x) := by
   admit
 
-theorem replace_bound_depth {φ : Form} {x : SVAR} : (φ.replace_bound x).depth = φ.depth := by
+theorem replace_bound_depth {φ : Form N} {x : SVAR} : (φ.replace_bound x).depth = φ.depth := by
   admit
 
-theorem replace_bound_depth' {ψ : Form} {x z : SVAR} : ((ψ.replace_bound x)[x//z]).depth < (ex x, ψ).depth := by
+theorem replace_bound_depth' {ψ : Form N} {x z : SVAR} : ((ψ.replace_bound x)[x//z]).depth < (ex x, ψ).depth := by
   rw [subst_depth', replace_bound_depth]
   apply ex_depth
 
-theorem substable_after_replace (φ : Form) : is_substable (φ.replace_bound y) y x := by
+theorem substable_after_replace (φ : Form N) : is_substable (φ.replace_bound y) y x := by
   induction φ with
   | bind z φ ih =>
       simp only [Form.replace_bound]
@@ -55,7 +55,7 @@ theorem substable_after_replace (φ : Form) : is_substable (φ.replace_bound y) 
   | _ =>
       simp only [Form.replace_bound, is_substable]
 
-theorem rename_all_bound_pf (φ : Form) (x : SVAR) : ⊢ (φ ⟷ (φ.replace_bound x)) := by
+theorem rename_all_bound_pf (φ : Form N) (x : SVAR) : ⊢ (φ ⟷ (φ.replace_bound x)) := by
   induction φ with
   | bind z φ ih =>
       rw [Form.replace_bound]
@@ -66,7 +66,7 @@ theorem rename_all_bound_pf (φ : Form) (x : SVAR) : ⊢ (φ ⟷ (φ.replace_bou
         let l3 := Proof.mp (Proof.mp (Proof.tautology iff_intro) l1) l2
         let y := (φ.replace_bound x).new_var + x.letter + 1
         have : y ≥ (φ.replace_bound x).new_var := by simp [SVAR.le, SVAR.add, Nat.add_assoc]
-        let l4 := @Proof.rename_bound y (φ.replace_bound x) x (ge_new_var_is_new this) (new_var_subst'' this)
+        let l4 := @Proof.rename_bound N y x (φ.replace_bound x) (ge_new_var_is_new this) (new_var_subst'' this)
         let l5 := Proof.mp (Proof.mp (Proof.tautology iff_rw) l3) l4
         exact l5
       . simp only [h, ite_false]
@@ -84,7 +84,7 @@ theorem rename_all_bound_pf (φ : Form) (x : SVAR) : ⊢ (φ ⟷ (φ.replace_bou
   | _ =>
       exact Proof.mp (Proof.mp (Proof.tautology iff_intro) (Proof.tautology imp_refl)) (Proof.tautology imp_refl)
 
-theorem rename_all_bound (φ : Form) (x : SVAR) : ⊨ (φ ⟷ (φ.replace_bound x)) := by
+theorem rename_all_bound (φ : Form N) (x : SVAR) : ⊨ (φ ⟷ (φ.replace_bound x)) := by
   exact WeakSoundness (rename_all_bound_pf φ x)
 
 theorem exists_replace : ⊢ ((ex x, φ.replace_bound y) ⟶ (ex x, φ)) := by

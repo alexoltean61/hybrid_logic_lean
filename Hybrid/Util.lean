@@ -16,7 +16,7 @@ theorem TypeIff.trans {h1 : TypeIff a b} {h2 : TypeIff b c} : TypeIff a c := by
     exact h1.mpr (h2.mpr h)
 infix:300 "iff" => TypeIff
 
-theorem choice_intro (q : α → Prop) (p : α → Prop) (P : ∃ a, p a) : (∀ a, p a → q a) → q P.choose := by
+theorem choice_intro (q : α → Sort u) (p : α → Prop) (P : ∃ a, p a) : (∀ a, p a → q a) → q P.choose := by
   intro h
   exact (h P.choose P.choose_spec)
 

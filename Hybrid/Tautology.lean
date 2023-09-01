@@ -1,27 +1,27 @@
 import Hybrid.Form
 
-structure Eval where
-  f  : Form → Bool
+structure Eval (N : Set ℕ) where
+  f  : Form N → Bool
   p1 : f ⊥ = false
-  p2 : ∀ φ ψ : Form, (f (φ ⟶ ψ) = true) ↔ (¬(f φ) = true ∨ (f ψ) = true)
+  p2 : ∀ φ ψ : Form N, (f (φ ⟶ ψ) = true) ↔ (¬(f φ) = true ∨ (f ψ) = true)
 
-def Tautology (φ : Form) : Prop := ∀ e : Eval, e.f φ = true
+def Tautology (φ : Form N) : Prop := ∀ e : Eval N, e.f φ = true
 
-theorem e_dn {e : Eval} : e.f (∼φ) = false ↔ e.f φ = true := by
+theorem e_dn {e : Eval N} : e.f (∼φ) = false ↔ e.f φ = true := by
   simp only [Form.neg, ←Bool.not_eq_true, e.p1, e.p2, not_or, not_not, and_true]
 
-theorem e_neg {e : Eval} : e.f (∼φ) = true ↔ e.f φ = false := by
+theorem e_neg {e : Eval N} : e.f (∼φ) = true ↔ e.f φ = false := by
   have c := @not_congr (e.f (∼φ) = false) (e.f φ = true) e_dn
   rw [Bool.not_eq_false, Bool.not_eq_true] at c
   exact c
 
-theorem e_conj {e : Eval} : e.f (φ ⋀ ψ) = true ↔ (e.f φ = true ∧ e.f ψ = true) := by
+theorem e_conj {e : Eval N} : e.f (φ ⋀ ψ) = true ↔ (e.f φ = true ∧ e.f ψ = true) := by
   rw [Form.conj, ←Bool.not_eq_false, e_dn, e.p2, not_or, not_not, Bool.not_eq_true, e_dn]
 
-theorem e_disj {e : Eval} : e.f (φ ⋁ ψ) = true ↔ (e.f φ = true ∨ e.f ψ = true) := by
+theorem e_disj {e : Eval N} : e.f (φ ⋁ ψ) = true ↔ (e.f φ = true ∨ e.f ψ = true) := by
   rw [Form.disj, e.p2, Bool.not_eq_true, e_dn]
 
-theorem e_impl {e : Eval} : e.f (φ ⟶ ψ) = true ↔ (e.f φ = true → e.f ψ = true) := by
+theorem e_impl {e : Eval N} : e.f (φ ⟶ ψ) = true ↔ (e.f φ = true → e.f ψ = true) := by
   simp only [e.p2, implication_disjunction]
 
 syntax "eval" : tactic
@@ -186,8 +186,8 @@ theorem com12 : Tautology ((φ ⟶ (ψ ⟶ χ)) ⟶ (ψ ⟶ (φ ⟶ χ))) := by
 theorem mp_help : Tautology ((a ⟶ (φ ⟶ ψ)) ⟶ ((b ⟶ φ) ⟶ (a ⟶ b ⟶ ψ))) := by
   admit
 
-def Eval.nom_variant (e e' : Eval) (i : NOM) (x : SVAR) : Prop :=
-  e'.f = (λ φ : Form => if φ = i then (e.f x) else (e.f φ))
+def Eval.nom_variant (e e' : Eval N) (i : NOM N) (x : SVAR) : Prop :=
+  e'.f = (λ φ : Form N => if φ = i then (e.f x) else (e.f φ))
 
 theorem iff_not : Tautology ((φ ⟷ ψ) ⟷ (∼φ ⟷ ∼ψ)) := by
   simp only [Form.iff, Form.conj, Form.neg]

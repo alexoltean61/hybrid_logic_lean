@@ -9,7 +9,7 @@ def pow3list (l : List (ℕ × ℕ × ℕ × ℕ)) := List.map (λ (a,b,c,d) => 
 
 def squash (n m : List (ℕ × ℕ × ℕ × ℕ)) : List (ℕ × ℕ × ℕ × ℕ) := pow2list n ++ pow3list m
 
-def Form.encode : Form → List (ℕ × ℕ × ℕ × ℕ)
+def Form.encode (N : Set ℕ) : Form N → List (ℕ × ℕ × ℕ × ℕ)
   | Form.bttm    => [(0,0,0,1)]
   | Form.prop p  => [(0,0,p.letter+1,0)]
   | Form.svar x  => [(0,x.letter+1,0,0)]
@@ -181,7 +181,9 @@ lemma squash_lemma : squash a b = squash n m → (pow2list a = pow2list n ∧ po
     have ⟨a_n, b_m⟩ := squash_lemma hyp
     exact ⟨pow2listinj a_n, pow3listinj b_m⟩  
 
-  theorem Inject_Form : Form.encode.Injective := by
+  #check Form.encode
+
+  theorem Inject_Form (N : Set ℕ) : (Form.encode N).Injective := by
     intro φ ψ
     intro h
     induction φ generalizing ψ with
@@ -193,13 +195,14 @@ lemma squash_lemma : squash a b = squash n m → (pow2list a = pow2list n ∧ po
     | bind x φ ih  =>
         cases ψ <;> simp [Form.encode, -implication_disjunction] at *
         apply And.intro
-        . exact ih h.right
         . exact congrArg SVAR.mk h.left
+        . exact ih h.right
     | _  =>
         induction ψ <;> simp [Form.encode] at * <;>
           first | exact congrArg PROP.mk h | exact congrArg SVAR.mk h |
-          try exact congrArg NOM.mk h
+          . simp [NOM_eq]
+            apply Subtype.eq
+            assumption
 
-instance : Countable Form := Inject_Form.countable
-
-instance : Nonempty Form := ⟨⊥⟩
+instance : Countable (Form N) := (Inject_Form N).countable
+instance : Nonempty  (Form N) := ⟨⊥⟩

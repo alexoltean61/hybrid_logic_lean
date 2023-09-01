@@ -1,6 +1,6 @@
 import Hybrid.Tautology
 
-theorem empty_list (L : List {x : Form | False}) : L = [] := by
+theorem empty_list (L : List {x : Form N | False}) : L = [] := by
   match L with
   | [] => simp
   | h :: t =>
@@ -8,11 +8,11 @@ theorem empty_list (L : List {x : Form | False}) : L = [] := by
       have := h.2
       simp at this
 
-def List.max_form {Γ : Set Form} : List Γ → (Form → ℕ) → ℕ
+def List.max_form {Γ : Set (Form N)} : List Γ → (Form N → ℕ) → ℕ
 | .nil, f      => f ⊥
 | .cons h t, f => if (f h) > (t.max_form f) then (f h) else (t.max_form f)
 
-theorem List.max_is_max {Γ : Set Form} (L : List Γ) (f : Form → ℕ) : ∀ φ, φ ∈ L → f φ ≤ L.max_form f := by
+theorem List.max_is_max {Γ : Set (Form N)} (L : List Γ) (f : Form N → ℕ) : ∀ φ, φ ∈ L → f φ ≤ L.max_form f := by
   intro φ in_list
   induction L with
   | nil => contradiction
@@ -37,27 +37,27 @@ theorem List.max_is_max {Γ : Set Form} (L : List Γ) (f : Form → ℕ) : ∀ �
 -- The standard implementation of these coerces the list
 -- to the type of element we are filtering / searching.
 -- It's overkill to coerce the whole list. We can use
--- h.val to compare an formula h : Set Form to a formula
+-- h.val to compare an formula h : Set (Form N) to a formula
 -- φ : Form.
-def filter' {Γ : Set Form} : List Γ → Form → List Γ
+def filter' {Γ : Set (Form N)} : List Γ → Form N → List Γ
 | [],   _   => []
 | h::t, φ => match h.val == φ with
   | true  => filter' t φ
   | false => h::(filter' t φ)
 
-def elem' {Γ : Set Form} : List Γ → Form → Bool
+def elem' {Γ : Set (Form N)} : List Γ → Form N → Bool
 | [], _    => false
 | h::t, φ => match h.val == φ with
   | true  => true
   | false => elem' t φ
 
-theorem filter'_filters {Γ : Set Form} {φ : Form} {L : List ↑(Γ ∪ {φ})} : ¬elem' (filter' L φ) φ := by
+theorem filter'_filters {Γ : Set (Form N)} {φ : Form N} {L : List ↑(Γ ∪ {φ})} : ¬elem' (filter' L φ) φ := by
   induction L with
   | nil           => simp [filter', elem']
   | cons h t ih   => cases c : ↑h == φ
                      repeat simp [filter', c, elem', ih]
 
-theorem filter'_doesnt_filter {Γ : Set Form} {L : List Γ} (hyp : ¬elem' L φ) : (filter' L φ) = L := by
+theorem filter'_doesnt_filter {Γ : Set (Form N)} {L : List Γ} (hyp : ¬elem' L φ) : (filter' L φ) = L := by
   induction L with
   | nil         => simp [filter']
   | cons h t ih => cases c : ↑h == φ
@@ -70,14 +70,14 @@ theorem filter'_doesnt_filter {Γ : Set Form} {L : List Γ} (hyp : ¬elem' L φ)
 --    Then, any list L of formulas taken from Γ can be
 --      converted to a list L' of formulas from Δ
 --      s.t. L and L' have the same elements.
-def list_convert_general {Γ Δ : Set Form} (h_incl : Γ ⊆ Δ) (L : List Γ) : List Δ :=
+def list_convert_general {Γ Δ : Set (Form N)} (h_incl : Γ ⊆ Δ) (L : List Γ) : List Δ :=
   match L with
   | []      => []
   | h :: t  => ⟨h.val, (h_incl h.prop)⟩ :: list_convert_general h_incl t
 
 --  And any conjunction of elements from Γ is a conjunction
 --    of elements from Δ.
-theorem conj_incl_general {Γ Δ : Set Form} (h_incl : Γ ⊆ Δ) (L : List Γ) : conjunction Γ L = conjunction Δ (list_convert_general h_incl L) := by
+theorem conj_incl_general {Γ Δ : Set (Form N)} (h_incl : Γ ⊆ Δ) (L : List Γ) : conjunction Γ L = conjunction Δ (list_convert_general h_incl L) := by
   match L with
   | []      =>
       simp [conjunction]
@@ -89,13 +89,13 @@ theorem conj_incl_general {Γ Δ : Set Form} (h_incl : Γ ⊆ Δ) (L : List Γ) 
 --    Then, any list L of formulas taken from Γ can be
 --      converted to a list L' of formulas from Γ ∪ {ψ}
 --      s.t. L and L' have the same elements.
-def list_convert {Γ : Set Form} {ψ : Form} (L : List Γ) : List ↑(Γ ∪ {ψ}) := by
+def list_convert {Γ : Set (Form N)} {ψ : Form N} (L : List Γ) : List ↑(Γ ∪ {ψ}) := by
   have incl : Γ ⊆ (Γ ∪ {ψ}) := by simp
   apply list_convert_general incl L
 
 -- Any conjunction of formulas from Γ is a conjunction
 -- of formulas from Γ ∪ {ψ}.
-theorem conj_incl {Γ : Set Form} {ψ : Form} (L : List Γ) : conjunction Γ L = conjunction (Γ ∪ {ψ}) (list_convert L) := by
+theorem conj_incl {Γ : Set (Form N)} {ψ : Form N} (L : List Γ) : conjunction Γ L = conjunction (Γ ∪ {ψ}) (list_convert L) := by
   have incl : Γ ⊆ (Γ ∪ {ψ}) := by simp
   exact conj_incl_general incl L
 
@@ -108,14 +108,14 @@ theorem help {α : Type u} {Γ : Set α} {φ ψ : α} (h1 : φ ∈ ↑(Γ ∪ {�
   simp [h2] at h1
   exact h1
 
-theorem help2 {Γ : Set Form} {h : Γ} {a : Form} {t : List Γ} : elem' (h::t) a = false → (elem' t a) = false := by
+theorem help2 {Γ : Set (Form N)} {h : Γ} {a : Form N} {t : List Γ} : elem' (h::t) a = false → (elem' t a) = false := by
   intro hyp
   cases c : h.val == a
   . simp [elem', c] at hyp
     exact hyp
   . simp [elem', c] at hyp
 
-def list_convert_rev {Γ : Set Form} {ψ : Form} (L : List ↑(Γ ∪ {ψ})) (hyp : elem' L ψ = false) : List Γ :=
+def list_convert_rev {Γ : Set (Form N)} {ψ : Form N} (L : List ↑(Γ ∪ {ψ})) (hyp : elem' L ψ = false) : List Γ :=
   match L with
   | []     => []
   | h ::t  => dite (ψ = ↑h)
@@ -128,7 +128,7 @@ def list_convert_rev {Γ : Set Form} {ψ : Form} (L : List ↑(Γ ∪ {ψ})) (hy
 
 -- Any conjunction of formulas from Γ ∪ {ψ} that doesn't include ψ
 -- is a conjunction of formulas from Γ.
-theorem conj_incl_rev {Γ : Set Form} {ψ : Form} (L : List ↑(Γ ∪ {ψ})) (hyp : elem' L ψ = false): conjunction (Γ ∪ {ψ}) L = conjunction Γ (list_convert_rev L hyp) := by
+theorem conj_incl_rev {Γ : Set (Form N)} {ψ : Form N} (L : List ↑(Γ ∪ {ψ})) (hyp : elem' L ψ = false): conjunction (Γ ∪ {ψ}) L = conjunction Γ (list_convert_rev L hyp) := by
   match L with
   | []      =>
       simp [conjunction]
@@ -147,7 +147,7 @@ theorem conj_incl_rev {Γ : Set Form} {ψ : Form} (L : List ↑(Γ ∪ {ψ})) (h
 --    which makes Γ and Δ behave as different (sub)types.
 --
 -- This is used in Lemma LindenbaumConsistent.
-theorem conj_incl_linden {Γ Δ : Set Form} (L : List Γ) (hyp : {↑φ | φ ∈ L} ⊆ Δ): ∃ L', conjunction Γ L = conjunction Δ L' := by
+theorem conj_incl_linden {Γ Δ : Set (Form N)} (L : List Γ) (hyp : {↑φ | φ ∈ L} ⊆ Δ): ∃ L', conjunction Γ L = conjunction Δ L' := by
   induction L with
   | nil =>
       let L' : List Δ := []
@@ -176,7 +176,7 @@ theorem conj_incl_linden {Γ Δ : Set Form} (L : List Γ) (hyp : {↑φ | φ ∈
       exists L'
       rw [conjunction, this, conj]
 
-theorem conj_idempotent {e : Eval} {Γ : Set Form} {L : List Γ} (hyp : elem' L φ) : e.f (conjunction Γ L) ∧ e.f φ ↔ e.f (conjunction Γ L) := by
+theorem conj_idempotent {e : Eval N} {Γ : Set (Form N)} {L : List Γ} (hyp : elem' L φ) : e.f (conjunction Γ L) ∧ e.f φ ↔ e.f (conjunction Γ L) := by
   induction L with
   | nil => simp [elem'] at hyp
   | cons h t ih =>
@@ -187,7 +187,7 @@ theorem conj_idempotent {e : Eval} {Γ : Set Form} {L : List Γ} (hyp : elem' L 
         simp only [conjunction, e_conj, and_assoc, ih hyp]
 
 -- Instead of proving conjunction is associative, commutative and idempotent, we do 3-in-1:
-theorem conj_helper {e : Eval} {Γ : Set Form} {L : List Γ} (hyp : elem' L φ) : e.f (conjunction Γ (filter' L φ)⋀φ) = true ↔ e.f (conjunction Γ L) = true := by
+theorem conj_helper {e : Eval N} {Γ : Set (Form N)} {L : List Γ} (hyp : elem' L φ) : e.f (conjunction Γ (filter' L φ)⋀φ) = true ↔ e.f (conjunction Γ L) = true := by
   induction L with
   | nil         =>
       simp [elem'] at hyp
@@ -205,11 +205,11 @@ theorem conj_helper {e : Eval} {Γ : Set Form} {L : List Γ} (hyp : elem' L φ) 
         rw [and_comm] at ih
         simp only [filter', eq, conjunction, e_conj, and_assoc, ih]
 
-theorem deduction_helper {Γ : Set Form} (L : List Γ) (φ ψ : Form) (h : elem' L φ) :
+theorem deduction_helper {Γ : Set (Form N)} (L : List Γ) (φ ψ : Form N) (h : elem' L φ) :
   Tautology ((conjunction Γ L ⟶ ψ) ⟶ (conjunction Γ (filter' L φ) ⟶ φ ⟶ ψ)) := by
   intro e
   rw [e_impl, e_impl, e_impl, e_impl]
   intro h1 h2 h3
-  have l1 := (@e_conj (conjunction Γ (filter' L φ)) φ e).mpr ⟨h2, h3⟩
+  have l1 := (@e_conj N (conjunction Γ (filter' L φ)) φ e).mpr ⟨h2, h3⟩
   rw [conj_helper h] at l1
   exact h1 l1

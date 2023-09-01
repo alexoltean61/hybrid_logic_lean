@@ -7,14 +7,7 @@ import Hybrid.RenameBound
 
 open Classical
 
-theorem truths_set_cons : (truths_set M s g).consistent := by
-  intro habs
-  have habs := Soundness habs
-  rw [Entails] at habs
-  have habs := habs M s g (by simp [truths_set])
-  exact habs
-
-def restrict_by : (Set Form → Prop) → (Set Form → Set Form → Prop) → (Set Form → Set Form → Prop) :=
+def restrict_by : (Set (Form N) → Prop) → (Set (Form N) → Set (Form N) → Prop) → (Set (Form N) → Set (Form N) → Prop) :=
   λ restriction => λ R => λ Γ => λ Δ => restriction Γ ∧ restriction Δ ∧ R Γ Δ
 
 theorem path_conj {R : α → Prop} : path (λ a b => R a ∧ R b) a b n → (R a → R b) := by
@@ -49,24 +42,24 @@ theorem path_restr' : path (restrict_by R₁ R₂) Γ Δ n → (R₁ Γ → R₁
       intro ⟨_, h⟩ _
       exact h.1.2.1
 
-structure GeneralModel where
+structure GeneralModel (N : Set ℕ) where
   W : Type    
-  R : W → W → Prop
-  Vₚ: PROP → Set W
-  Vₙ: NOM  → Set W
+  R : W → W  → Prop
+  Vₚ: PROP   → Set W
+  Vₙ: NOM N  → Set W
 
 def GeneralI (W : Type) := SVAR → Set W
 
-def Canonical : GeneralModel where
-  W := Set Form
-  R := restrict_by Set.MCS (λ Γ => λ Δ => (∀ {φ : Form}, □φ ∈ Γ → φ ∈ Δ))
+def Canonical : GeneralModel TotalSet where
+  W := Set (Form TotalSet)
+  R := restrict_by MCS (λ Γ => λ Δ => (∀ {φ : Form TotalSet}, □φ ∈ Γ → φ ∈ Δ))
 --  R := λ Γ => λ Δ => Γ.MCS ∧ Δ.MCS ∧ (∀ φ : Form, □φ ∈ Γ → φ ∈ Δ)
-  Vₚ:= λ p => {Γ | Γ.MCS ∧ ↑p ∈ Γ}
-  Vₙ:= λ i => {Γ | Γ.MCS ∧ ↑i ∈ Γ}
+  Vₚ:= λ p => {Γ | MCS Γ ∧ ↑p ∈ Γ}
+  Vₙ:= λ i => {Γ | MCS Γ ∧ ↑i ∈ Γ}
 
-def CanonicalI : SVAR → Set (Set Form) := λ x => {Γ | Γ.MCS ∧ ↑x ∈ Γ}
+def CanonicalI : SVAR → Set (Set (Form TotalSet)) := λ x => {Γ | MCS Γ ∧ ↑x ∈ Γ}
 
-instance : Membership Form Canonical.W := ⟨Set.Mem⟩  
+instance : Membership (Form TotalSet) Canonical.W := ⟨Set.Mem⟩  
 
 theorem R_nec : □φ ∈ Γ → Canonical.R Γ Δ → φ ∈ Δ := by
   intro h1 h2
@@ -74,7 +67,7 @@ theorem R_nec : □φ ∈ Γ → Canonical.R Γ Δ → φ ∈ Δ := by
   apply h2.right.right
   assumption
 
-theorem R_pos : Canonical.R Γ Δ ↔ (Γ.MCS ∧ Δ.MCS ∧ ∀ {φ}, (φ ∈ Δ → ◇φ ∈ Γ)) := by
+theorem R_pos : Canonical.R Γ Δ ↔ (MCS Γ ∧ MCS Δ ∧ ∀ {φ}, (φ ∈ Δ → ◇φ ∈ Γ)) := by
   simp only [Canonical, restrict_by]
   apply Iff.intro
   . intro ⟨h1, h2, h3⟩
@@ -82,8 +75,9 @@ theorem R_pos : Canonical.R Γ Δ ↔ (Γ.MCS ∧ Δ.MCS ∧ ∀ {φ}, (φ ∈ �
     intro φ φ_mem
     rw [←(@not_not (◇φ ∈ Γ))]
     intro habs
-    have habs := h1.right habs
-    rw [←Proof.Deduction, ←Form.neg, Form.diamond] at habs
+    have ⟨habs, _⟩ := not_forall.mp (h1.right habs)
+    have habs := Proof.Deduction.mpr habs
+    rw [←Form.neg, Form.diamond] at habs
     have habs : ∼φ ∈ Δ := by
       apply h3
       apply Proof.MCS_pf h1
@@ -92,7 +86,7 @@ theorem R_pos : Canonical.R Γ Δ ↔ (Γ.MCS ∧ Δ.MCS ∧ ∀ {φ}, (φ ∈ �
       apply Proof.tautology
       apply dne
       assumption
-    unfold Set.MCS Set.consistent at h1 h2
+    unfold MCS consistent at h1 h2
     apply h2.left
     apply Proof.Γ_mp
     repeat (apply Proof.Γ_premise; assumption)
@@ -101,13 +95,14 @@ theorem R_pos : Canonical.R Γ Δ ↔ (Γ.MCS ∧ Δ.MCS ∧ ∀ {φ}, (φ ∈ �
     intro φ φ_mem
     rw [←(@not_not (φ ∈ Δ))]
     intro habs
-    have habs := h2.right habs
-    rw [←Proof.Deduction, ←Form.neg] at habs
+    have ⟨habs, _⟩ := not_forall.mp (h2.right habs)
+    have habs := Proof.Deduction.mpr habs
+    rw [←Form.neg] at habs
     have habs : ◇∼φ ∈ Γ := by
       apply h3
       apply Proof.MCS_pf h2
       assumption
-    unfold Set.MCS Set.consistent at h1 h2
+    unfold MCS consistent at h1 h2
     apply h1.left
     apply Proof.Γ_mp
     apply Proof.Γ_premise
@@ -163,8 +158,8 @@ theorem restrict_R_iter_pos {n : ℕ} : path (restrict_by R Canonical.R) Γ Δ n
   repeat assumption
 
 -- implicitly we mean generated submodels *of the canonical model*
-def Set.GeneratedSubmodel (Θ : Set Form) (restriction : Set Form → Prop) : GeneralModel where
-  W := Set Form
+def Set.GeneratedSubmodel (Θ : Set (Form TotalSet)) (restriction : Set (Form TotalSet) → Prop) : GeneralModel TotalSet where
+  W := Set (Form TotalSet)
   R := λ Γ => λ Δ =>
     (∃ n, path (restrict_by restriction Canonical.R) Θ Γ n) ∧
     (∃ m, path (restrict_by restriction Canonical.R) Θ Δ m) ∧
@@ -172,10 +167,10 @@ def Set.GeneratedSubmodel (Θ : Set Form) (restriction : Set Form → Prop) : Ge
   Vₚ:= λ p => {Γ | (∃ n, path (restrict_by restriction Canonical.R) Θ Γ n) ∧ Γ ∈ Canonical.Vₚ p}
   Vₙ:= λ i => {Γ | (∃ n, path (restrict_by restriction Canonical.R) Θ Γ n) ∧ Γ ∈ Canonical.Vₙ i}
 
-def Set.GeneratedSubI (Θ : Set Form) (restriction : Set Form → Prop) : GeneralI (Set Form) := λ x =>
+def Set.GeneratedSubI (Θ : Set (Form TotalSet)) (restriction : Set (Form TotalSet) → Prop) : GeneralI (Set (Form TotalSet)) := λ x =>
   {Γ | (∃ n, path (restrict_by restriction Canonical.R) Θ Γ n) ∧ Γ ∈ CanonicalI x}
 
-theorem submodel_canonical_path (Θ : Set Form) (r : Set Form → Prop) (rt : r Θ) : path (Θ.GeneratedSubmodel r).R Γ Δ n → path (restrict_by r Canonical.R) Γ Δ n := by
+theorem submodel_canonical_path (Θ : Set (Form TotalSet)) (r : Set (Form TotalSet) → Prop) (rt : r Θ) : path (Θ.GeneratedSubmodel r).R Γ Δ n → path (restrict_by r Canonical.R) Γ Δ n := by
   intro h
   induction n generalizing Γ Δ with
   | zero =>
@@ -195,7 +190,7 @@ theorem submodel_canonical_path (Θ : Set Form) (r : Set Form → Prop) (rt : r 
           repeat assumption
       . exact this
 
-theorem path_root (Θ : Set Form) (r : Set Form → Prop) : path (restrict_by r Canonical.R) Θ Γ n → path (Θ.GeneratedSubmodel r).R Θ Γ n := by
+theorem path_root (Θ : Set (Form TotalSet)) (r : Set (Form TotalSet) → Prop) : path (restrict_by r Canonical.R) Θ Γ n → path (Θ.GeneratedSubmodel r).R Θ Γ n := by
   induction n generalizing Θ Γ with
   | zero => simp [path]
   | succ n ih =>
@@ -214,24 +209,24 @@ theorem path_root (Θ : Set Form) (r : Set Form → Prop) : path (restrict_by r 
       . apply ih
         exact h2
 
-def WitnessedModel {Θ : Set Form} (_ : Θ.MCS) (_ : Θ.witnessed) : GeneralModel := Θ.GeneratedSubmodel Set.witnessed
-def WitnessedI {Θ : Set Form} (_ : Θ.MCS) (_ : Θ.witnessed) : GeneralI (Set Form) := Θ.GeneratedSubI Set.witnessed
+def WitnessedModel {Θ : Set (Form TotalSet)} (_ : MCS Θ) (_ : witnessed Θ) : GeneralModel TotalSet := Θ.GeneratedSubmodel witnessed
+def WitnessedI {Θ : Set (Form TotalSet)} (_ : MCS Θ) (_ : witnessed Θ) : GeneralI (Set (Form TotalSet)) := Θ.GeneratedSubI witnessed
 
-def CompletedModel {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : GeneralModel where
-  W := Set Form
+def CompletedModel {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : GeneralModel TotalSet where
+  W := Set (Form TotalSet)
   R := λ Γ => λ Δ => ((WitnessedModel mcs wit).R Γ Δ) ∨ (Γ = {Form.bttm} ∧ Δ = Θ)
   Vₚ:= λ p => (WitnessedModel mcs wit).Vₚ p
   Vₙ:= λ i => if (WitnessedModel mcs wit).Vₙ i ≠ ∅
               then  (WitnessedModel mcs wit).Vₙ i
               else { {Form.bttm} }
-def CompletedI {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : GeneralI (Set Form) := λ x =>
+def CompletedI {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : GeneralI (Set (Form TotalSet)) := λ x =>
   if (WitnessedI mcs wit) x ≠ ∅
               then  (WitnessedI mcs wit) x
               else { {Form.bttm} }
 
 -- Lemma 3.11, Blackburn 1998, pg. 637
-lemma subsingleton_valuation : ∀ {Θ : Set Form} {R : Set Form → Prop} (i : NOM), Θ.MCS → ((Θ.GeneratedSubmodel R).Vₙ i).Subsingleton := by
-  -- the hypothesis Θ.MCS is not necessary
+lemma subsingleton_valuation : ∀ {Θ : Set (Form TotalSet)} {R : Set (Form TotalSet) → Prop} (i : NOM TotalSet), MCS Θ → ((Θ.GeneratedSubmodel R).Vₙ i).Subsingleton := by
+  -- the hypothesis MCS Θ is not necessary
   --  but to prove the theorem without it would complicate
   --  the code, and anyway, we'll only ever use MCS-generated submodels
   simp only [Set.Subsingleton, Set.GeneratedSubmodel]
@@ -246,7 +241,7 @@ lemma subsingleton_valuation : ∀ {Θ : Set Form} {R : Set Form → Prop} (i : 
     intro ⟨h3, h4⟩
     apply h4
     have := restrict_R_iter_pos h1 ((Proof.MCS_conj Γ_MCS i φ).mp ⟨Γ_i, h3⟩)
-    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (@Proof.ax_nom_instance φ i n m)) this
+    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (Proof.ax_nom_instance i n m)) this
     have := restrict_R_iter_nec this h2
     apply Proof.MCS_mp
     repeat assumption
@@ -254,12 +249,12 @@ lemma subsingleton_valuation : ∀ {Θ : Set Form} {R : Set Form → Prop} (i : 
     intro ⟨h3, h4⟩
     apply h3
     have := restrict_R_iter_pos h2 ((Proof.MCS_conj Δ_MCS i φ).mp ⟨Δ_i, h4⟩)
-    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (@Proof.ax_nom_instance φ i m n)) this
+    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (Proof.ax_nom_instance i m n)) this
     have := restrict_R_iter_nec this h1
     apply Proof.MCS_mp
     repeat assumption
 
-lemma subsingleton_i : ∀ {Θ : Set Form} {R : Set Form → Prop} (x : SVAR), Θ.MCS → ((Θ.GeneratedSubI R) x).Subsingleton := by
+lemma subsingleton_i : ∀ {Θ : Set (Form TotalSet)} {R : Set (Form TotalSet) → Prop} (x : SVAR), MCS Θ → ((Θ.GeneratedSubI R) x).Subsingleton := by
   simp only [Set.Subsingleton, Set.GeneratedSubmodel]
   intro Θ restr x Θ_MCS Γ ⟨⟨n, h1⟩, ⟨Γ_MCS, Γ_i⟩⟩  Δ ⟨⟨m, h2⟩, ⟨Δ_MCS, Δ_i⟩⟩
   simp only [Set.GeneratedSubmodel] at Γ Δ ⊢
@@ -272,7 +267,7 @@ lemma subsingleton_i : ∀ {Θ : Set Form} {R : Set Form → Prop} (x : SVAR), �
     intro ⟨h3, h4⟩
     apply h4
     have := restrict_R_iter_pos h1 ((Proof.MCS_conj Γ_MCS x φ).mp ⟨Γ_i, h3⟩)
-    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (@Proof.ax_nom_instance' φ x n m)) this
+    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (Proof.ax_nom_instance' x n m)) this
     have := restrict_R_iter_nec this h2
     apply Proof.MCS_mp
     repeat assumption
@@ -280,22 +275,22 @@ lemma subsingleton_i : ∀ {Θ : Set Form} {R : Set Form → Prop} (x : SVAR), �
     intro ⟨h3, h4⟩
     apply h3
     have := restrict_R_iter_pos h2 ((Proof.MCS_conj Δ_MCS x φ).mp ⟨Δ_i, h4⟩)
-    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (@Proof.ax_nom_instance' φ x m n)) this
+    have := Proof.MCS_mp Θ_MCS (Proof.MCS_thm Θ_MCS (Proof.ax_nom_instance' x m n)) this
     have := restrict_R_iter_nec this h1
     apply Proof.MCS_mp
     repeat assumption
 
-lemma wit_subsingleton_valuation {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (i : NOM) : ((WitnessedModel mcs wit).Vₙ i).Subsingleton := by
+lemma wit_subsingleton_valuation {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) (i : NOM TotalSet) : ((WitnessedModel mcs wit).Vₙ i).Subsingleton := by
   rw [WitnessedModel]
   apply subsingleton_valuation
   assumption
 
-lemma wit_subsingleton_i {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (x : SVAR) : ((WitnessedI mcs wit) x).Subsingleton := by
+lemma wit_subsingleton_i {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) (x : SVAR) : ((WitnessedI mcs wit) x).Subsingleton := by
   rw [WitnessedI]
   apply subsingleton_i
   assumption
 
-lemma completed_singleton_valuation {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (i : NOM) : ∃ Γ : Set Form, (CompletedModel mcs wit).Vₙ i = {Γ} := by
+lemma completed_singleton_valuation {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) (i : NOM TotalSet) : ∃ Γ : Set (Form TotalSet), (CompletedModel mcs wit).Vₙ i = {Γ} := by
   simp [CompletedModel]
   split
   . simp
@@ -308,7 +303,7 @@ lemma completed_singleton_valuation {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.wit
           apply wit_subsingleton_valuation
           assumption
 
-lemma completed_singleton_i {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (x : SVAR) : ∃ Γ : Set Form, (CompletedI mcs wit) x = {Γ} := by
+lemma completed_singleton_i {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) (x : SVAR) : ∃ Γ : Set (Form TotalSet), (CompletedI mcs wit) x = {Γ} := by
   simp [CompletedI]
   split
   . simp
@@ -321,9 +316,9 @@ lemma completed_singleton_i {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) 
           apply wit_subsingleton_i
           assumption
 
-def Set.MCS_in (Γ : Set Form) {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : Prop := ∃ n, path (WitnessedModel mcs wit).R Θ Γ n
+def Set.MCS_in (Γ : Set (Form TotalSet)) {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : Prop := ∃ n, path (WitnessedModel mcs wit).R Θ Γ n
 
-theorem mcs_in_prop {Γ Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : Γ.MCS_in mcs wit → (Γ.MCS ∧ Γ.witnessed) := by
+theorem mcs_in_prop {Γ Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : Γ.MCS_in mcs wit → (MCS Γ ∧ witnessed Γ) := by
   intro ⟨n, h⟩
   cases n with
   | zero =>
@@ -339,7 +334,7 @@ theorem mcs_in_prop {Γ Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : Γ.
       apply path_restr' h4
       exact wit
 
-theorem mcs_in_wit {Γ Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : Γ.MCS_in mcs wit → (∃ n, path (restrict_by Set.witnessed Canonical.R) Θ Γ n) := by
+theorem mcs_in_wit {Γ Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : Γ.MCS_in mcs wit → (∃ n, path (restrict_by witnessed Canonical.R) Θ Γ n) := by
   intro ⟨n, h⟩
   exists n
   cases n with 
@@ -359,13 +354,13 @@ theorem mcs_in_wit {Γ Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : Γ.M
         . apply path_restr'
           repeat assumption
 
-def needs_dummy {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) := (∃ i, ((CompletedModel mcs wit).Vₙ i) = { (Set.singleton Form.bttm) }) ∨
+def needs_dummy {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) := (∃ i, ((CompletedModel mcs wit).Vₙ i) = { (Set.singleton Form.bttm) }) ∨
                                                                                  (∃ x, ((CompletedI mcs wit) x) = { (Set.singleton Form.bttm) })
 
-def Set.is_dummy (Γ : Set Form) {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) := needs_dummy mcs wit ∧ Γ = {Form.bttm}
+def Set.is_dummy (Γ : Set (Form TotalSet)) {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) := needs_dummy mcs wit ∧ Γ = {Form.bttm}
 
 
-theorem choose_subtype {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed)  : ((completed_singleton_valuation mcs wit i).choose.MCS_in mcs wit) ∨ (completed_singleton_valuation mcs wit i).choose.is_dummy mcs wit := by
+theorem choose_subtype {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ)  : ((completed_singleton_valuation mcs wit i).choose.MCS_in mcs wit) ∨ (completed_singleton_valuation mcs wit i).choose.is_dummy mcs wit := by
   apply choice_intro (λ Γ => (Set.MCS_in Γ mcs wit) ∨ (Set.is_dummy Γ mcs wit))
   intro Γ h
   simp [CompletedModel, WitnessedModel, Set.GeneratedSubmodel] at h
@@ -381,7 +376,7 @@ theorem choose_subtype {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed)  : ((
         simp at h
         exact h
   . apply Or.inl
-    have Γ_mem : Γ ∈ {Γ | (∃ n, path (restrict_by Set.witnessed Canonical.R) Θ Γ n) ∧ Γ ∈ GeneralModel.Vₙ Canonical i} := by simp [h]
+    have Γ_mem : Γ ∈ {Γ | (∃ n, path (restrict_by witnessed Canonical.R) Θ Γ n) ∧ Γ ∈ GeneralModel.Vₙ Canonical i} := by simp [h]
     simp at Γ_mem
     have ⟨⟨n, pth⟩, _⟩ := Γ_mem
     simp [Set.MCS_in, WitnessedModel]
@@ -389,7 +384,7 @@ theorem choose_subtype {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed)  : ((
     apply path_root
     exact pth
 
-theorem choose_subtype' {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : ((completed_singleton_i mcs wit i).choose.MCS_in mcs wit) ∨ (completed_singleton_i mcs wit i).choose.is_dummy mcs wit := by
+theorem choose_subtype' {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : ((completed_singleton_i mcs wit i).choose.MCS_in mcs wit) ∨ (completed_singleton_i mcs wit i).choose.is_dummy mcs wit := by
   apply choice_intro (λ Γ => (Set.MCS_in Γ mcs wit) ∨ (Set.is_dummy Γ mcs wit))
   intro Γ h
   simp [CompletedI, WitnessedI, Set.GeneratedSubI] at h
@@ -405,7 +400,7 @@ theorem choose_subtype' {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : ((
         simp at h
         exact h
   . apply Or.inl
-    have Γ_mem : Γ ∈ {Γ | (∃ n, path (restrict_by Set.witnessed Canonical.R) Θ Γ n) ∧ Γ ∈ CanonicalI i} := by simp [h]
+    have Γ_mem : Γ ∈ {Γ | (∃ n, path (restrict_by witnessed Canonical.R) Θ Γ n) ∧ Γ ∈ CanonicalI i} := by simp [h]
     simp at Γ_mem
     have ⟨⟨n, pth⟩, _⟩ := Γ_mem
     simp [Set.MCS_in, WitnessedModel]
@@ -418,13 +413,13 @@ theorem choose_subtype' {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : ((
 --    we define the set of states as Γ.MCS_in ∨ Γ.is_dummy
 --    where is_dummy contains the assumption that we are *forced*
 --    to glue a dummy
-noncomputable def StandardCompletedModel {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : Model :=
-    ⟨{Γ : Set Form // Γ.MCS_in mcs wit ∨ Γ.is_dummy mcs wit},
+noncomputable def StandardCompletedModel {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : Model TotalSet :=
+    ⟨{Γ : Set (Form TotalSet) // Γ.MCS_in mcs wit ∨ Γ.is_dummy mcs wit},
       λ Γ => λ Δ => (CompletedModel mcs wit).R Γ.1 Δ.1,
       λ p => {Γ | Γ.1 ∈ ((CompletedModel mcs wit).Vₚ p)},
       λ i => ⟨(completed_singleton_valuation mcs wit i).choose, choose_subtype mcs wit⟩⟩
 
-noncomputable def StandardCompletedI {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : I (StandardCompletedModel mcs wit).W :=
+noncomputable def StandardCompletedI {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : I (StandardCompletedModel mcs wit).W :=
     λ x => ⟨(completed_singleton_i mcs wit x).choose, choose_subtype' mcs wit⟩
 
 theorem sat_dual_all_ex : ((M,s,g) ⊨ (all x, φ)) ↔ (M,s,g) ⊨ ∼(ex x, ∼φ) := by
@@ -454,18 +449,20 @@ theorem sat_dual_nec_pos : ((M,s,g) ⊨ (□ φ)) ↔ (M,s,g) ⊨ ∼(◇ ∼φ)
     exact this
 
 @[simp]
-def coe (Δ : Set Form) {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (h : Δ.MCS_in mcs wit) : (StandardCompletedModel mcs wit).W := ⟨Δ, Or.inl h⟩
+def coe (Δ : Set (Form TotalSet)) {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) (h : Δ.MCS_in mcs wit) : (StandardCompletedModel mcs wit).W := ⟨Δ, Or.inl h⟩
 
-def statement (φ : Form) {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) := ∀ {Δ : Set Form}, (h : Δ.MCS_in mcs wit) → φ ∈ Δ ↔ (StandardCompletedModel mcs wit, coe Δ mcs wit h, StandardCompletedI mcs wit) ⊨ φ 
+def statement (φ : Form TotalSet) {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) := ∀ {Δ : Set (Form TotalSet)}, (h : Δ.MCS_in mcs wit) → φ ∈ Δ ↔ (StandardCompletedModel mcs wit, coe Δ mcs wit h, StandardCompletedI mcs wit) ⊨ φ 
 
 
-lemma truth_bttm : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (statement ⊥ mcs wit) := by
+lemma truth_bttm : ∀ {Θ : Set (Form TotalSet)}, (mcs : MCS Θ) → (wit : witnessed Θ) → (statement ⊥ mcs wit) := by
   intro _ mcs' wit' Δ h
   have := (mcs_in_prop mcs' wit' h).1
-  simp [←Proof.MCS_pf_iff this]
-  exact this.1
+  apply Iff.intro
+  . intro h
+    exact this.1 (Proof.Γ_premise h)
+  . simp
 
-lemma truth_prop : ∀ {Θ : Set Form} {p : PROP}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (statement p mcs wit) := by
+lemma truth_prop : ∀ {Θ : Set (Form TotalSet)} {p : PROP}, (mcs : MCS Θ) → (wit : witnessed Θ) → (statement p mcs wit) := by
   intro Θ  _ mcs wit Δ h
   have ⟨D_mcs, _⟩ := (mcs_in_prop mcs wit h)
   apply Iff.intro
@@ -479,29 +476,29 @@ lemma truth_prop : ∀ {Θ : Set Form} {p : PROP}, (mcs : Θ.MCS) → (wit : Θ.
     intros
     assumption
 
-lemma truth_nom_help : ∀ {Θ : Set Form} {i : NOM}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → ∀ {Δ : Set Form}, Δ.MCS_in mcs wit → (↑i ∈ Δ ↔ ((StandardCompletedModel mcs wit).Vₙ ↑i).1 = Δ) := by
+lemma truth_nom_help : ∀ {Θ : Set (Form TotalSet)} {i : NOM TotalSet}, (mcs : MCS Θ) → (wit : witnessed Θ) → ∀ {Δ : Set (Form TotalSet)}, Δ.MCS_in mcs wit → (↑i ∈ Δ ↔ ((StandardCompletedModel mcs wit).Vₙ ↑i).1 = Δ) := by
   intro Θ i mcs wit Δ h_in
   have ⟨D_mcs, _⟩ := (mcs_in_prop mcs wit h_in)
   simp [StandardCompletedModel, CompletedModel, WitnessedModel]
   apply Iff.intro
   . intro h
-    apply choice_intro (λ Γ : Set Form => Γ = Δ)
+    apply choice_intro (λ Γ : Set (Form TotalSet) => Γ = Δ)
     intro Η eta_eq
-    have delta_mem : Δ ∈ (Θ.GeneratedSubmodel Set.witnessed).Vₙ i := by
+    have delta_mem : Δ ∈ (Θ.GeneratedSubmodel witnessed).Vₙ i := by
       simp [Set.GeneratedSubmodel, WitnessedModel] at h_in ⊢
       apply And.intro
       . have ⟨n, h_in⟩ := h_in
         exists n
-        exact submodel_canonical_path Θ Set.witnessed wit h_in
+        exact submodel_canonical_path Θ witnessed wit h_in
       . simp [Canonical, h, D_mcs]
     split at eta_eq
     . next fls =>
         exfalso
-        rw [←@not_not (((Θ.GeneratedSubmodel Set.witnessed).Vₙ i) = ∅), ←Ne,
+        rw [←@not_not (((Θ.GeneratedSubmodel witnessed).Vₙ i) = ∅), ←Ne,
           ←Set.nonempty_iff_ne_empty, Set.nonempty_def, not_exists] at fls
         apply fls Δ 
         exact delta_mem
-    . have eta_mem : Η ∈ (Θ.GeneratedSubmodel Set.witnessed).Vₙ i := by simp [eta_eq]
+    . have eta_mem : Η ∈ (Θ.GeneratedSubmodel witnessed).Vₙ i := by simp [eta_eq]
       apply subsingleton_valuation i mcs
       exact eta_mem
       exact delta_mem
@@ -509,7 +506,7 @@ lemma truth_nom_help : ∀ {Θ : Set Form} {i : NOM}, (mcs : Θ.MCS) → (wit : 
     rw [←h] at h_in D_mcs ⊢
     clear h
     simp [StandardCompletedModel, CompletedModel, WitnessedModel] at h_in D_mcs ⊢
-    apply choice_intro (λ Γ : Set Form => ↑i ∈ Γ)
+    apply choice_intro (λ Γ : Set (Form TotalSet) => ↑i ∈ Γ)
     intro Η eta_eq
     split at eta_eq
     . next fls =>
@@ -520,33 +517,33 @@ lemma truth_nom_help : ∀ {Θ : Set Form} {i : NOM}, (mcs : Θ.MCS) → (wit : 
         simp [fls, Set.eq_singleton_iff_unique_mem] at a
         apply Proof.Γ_premise
         exact a.left.left
-    . have eta_mem : Η ∈ (Θ.GeneratedSubmodel Set.witnessed).Vₙ i := by simp [eta_eq]
+    . have eta_mem : Η ∈ (Θ.GeneratedSubmodel witnessed).Vₙ i := by simp [eta_eq]
       simp [Set.GeneratedSubmodel, Canonical] at eta_mem
-      exact eta_mem.left.left
+      exact eta_mem.left.right
 
-lemma truth_svar_help : ∀ {Θ : Set Form} {i : SVAR}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → ∀ {Δ : Set Form}, Δ.MCS_in mcs wit → (↑i ∈ Δ ↔ (StandardCompletedI mcs wit ↑i).1 = Δ) := by
+lemma truth_svar_help : ∀ {Θ : Set (Form TotalSet)} {i : SVAR}, (mcs : MCS Θ) → (wit : witnessed Θ) → ∀ {Δ : Set (Form TotalSet)}, Δ.MCS_in mcs wit → (↑i ∈ Δ ↔ (StandardCompletedI mcs wit ↑i).1 = Δ) := by
   intro Θ i mcs wit Δ h_in
   have ⟨D_mcs, _⟩ := (mcs_in_prop mcs wit h_in)
   simp [StandardCompletedI, CompletedI, WitnessedI]
   apply Iff.intro
   . intro h
-    apply choice_intro (λ Γ : Set Form => Γ = Δ)
+    apply choice_intro (λ Γ : Set (Form TotalSet) => Γ = Δ)
     intro Η eta_eq
-    have delta_mem : Δ ∈ Θ.GeneratedSubI Set.witnessed i := by
+    have delta_mem : Δ ∈ Θ.GeneratedSubI witnessed i := by
       simp [Set.GeneratedSubI, WitnessedI] at h_in ⊢
       apply And.intro
       . have ⟨n, h_in⟩ := h_in
         exists n
-        exact submodel_canonical_path Θ Set.witnessed wit h_in
+        exact submodel_canonical_path Θ witnessed wit h_in
       . simp [CanonicalI, h, D_mcs]
     split at eta_eq
     . next fls =>
         exfalso
-        rw [←@not_not ((Θ.GeneratedSubI Set.witnessed i) = ∅), ←Ne,
+        rw [←@not_not ((Θ.GeneratedSubI witnessed i) = ∅), ←Ne,
           ←Set.nonempty_iff_ne_empty, Set.nonempty_def, not_exists] at fls
         apply fls Δ 
         exact delta_mem
-    . have eta_mem : Η ∈ Θ.GeneratedSubI Set.witnessed i := by simp [eta_eq]
+    . have eta_mem : Η ∈ Θ.GeneratedSubI witnessed i := by simp [eta_eq]
       apply subsingleton_i i mcs
       exact eta_mem
       exact delta_mem
@@ -554,7 +551,7 @@ lemma truth_svar_help : ∀ {Θ : Set Form} {i : SVAR}, (mcs : Θ.MCS) → (wit 
     rw [←h] at h_in D_mcs ⊢
     clear h
     simp [StandardCompletedI, CompletedI, WitnessedI] at h_in D_mcs ⊢
-    apply choice_intro (λ Γ : Set Form => ↑i ∈ Γ)
+    apply choice_intro (λ Γ : Set (Form TotalSet) => ↑i ∈ Γ)
     intro Η eta_eq
     split at eta_eq
     . next fls =>
@@ -565,11 +562,11 @@ lemma truth_svar_help : ∀ {Θ : Set Form} {i : SVAR}, (mcs : Θ.MCS) → (wit 
         simp [fls, Set.eq_singleton_iff_unique_mem] at a
         apply Proof.Γ_premise
         exact a.left.left
-    . have eta_mem : Η ∈ Θ.GeneratedSubI Set.witnessed i := by simp [eta_eq]
+    . have eta_mem : Η ∈ Θ.GeneratedSubI witnessed i := by simp [eta_eq]
       simp [Set.GeneratedSubI, CanonicalI] at eta_mem
-      exact eta_mem.2.1
+      exact eta_mem.right.right
 
-lemma truth_nom : ∀ {Θ : Set Form} {i : NOM}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (statement i mcs wit) := by
+lemma truth_nom : ∀ {Θ : Set (Form TotalSet)} {i : NOM TotalSet}, (mcs : MCS Θ) → (wit : witnessed Θ) → (statement i mcs wit) := by
   intro Θ i mcs wit Δ h_in
   apply Iff.intro
   . intro h
@@ -587,7 +584,7 @@ lemma truth_nom : ∀ {Θ : Set Form} {i : NOM}, (mcs : Θ.MCS) → (wit : Θ.wi
     apply Eq.symm
     exact h
 
-lemma truth_svar : ∀ {Θ : Set Form} {i : SVAR}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (statement i mcs wit) := by
+lemma truth_svar : ∀ {Θ : Set (Form TotalSet)} {i : SVAR}, (mcs : MCS Θ) → (wit : witnessed Θ) → (statement i mcs wit) := by
   intro Θ i mcs wit Δ h_in
   apply Iff.intro
   . intro h
@@ -605,7 +602,7 @@ lemma truth_svar : ∀ {Θ : Set Form} {i : SVAR}, (mcs : Θ.MCS) → (wit : Θ.
     apply Eq.symm
     exact h
 
-lemma truth_impl : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (statement φ mcs wit) → (statement ψ mcs wit) → statement (φ ⟶ ψ) mcs wit := by
+lemma truth_impl : ∀ {Θ : Set (Form TotalSet)}, (mcs : MCS Θ) → (wit : witnessed Θ) → (statement φ mcs wit) → (statement ψ mcs wit) → statement (φ ⟶ ψ) mcs wit := by
   intro Θ mcs wit ih_φ ih_ψ Δ h_in
   have ⟨D_mcs, _⟩ := (mcs_in_prop mcs wit h_in)
   apply Iff.intro
@@ -658,7 +655,7 @@ lemma has_state_symbol (s : (StandardCompletedModel mcs wit).W) : (∃ i, (Stand
       apply Eq.symm
       exact eq
 
-lemma truth_ex : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (∀ {χ : Form}, χ.depth < (ex x, ψ).depth → statement χ mcs wit) → statement (ex x, ψ) mcs wit := by
+lemma truth_ex : ∀ {Θ : Set (Form TotalSet)}, (mcs : MCS Θ) → (wit : witnessed Θ) → (∀ {χ : Form TotalSet}, χ.depth < (ex x, ψ).depth → statement χ mcs wit) → statement (ex x, ψ) mcs wit := by
   intro Θ mcs wit ih
   intro Δ Δ_in
   have ⟨Δ_mcs, Δ_wit⟩ := (mcs_in_prop mcs wit Δ_in)
@@ -667,7 +664,7 @@ lemma truth_ex : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) �
     have ⟨i, mem⟩ := Δ_wit h
     have ih_s := @ih (ψ[i//x]) subst_depth''
     rw [ih_s Δ_in] at mem
-    apply WeakSoundness (@Proof.ax_q2_contrap ψ i x)
+    apply WeakSoundness Proof.ax_q2_contrap
     exact mem
   . simp only [ex_sat]
     intro ⟨g', g'_var, g'_ψ⟩
@@ -676,10 +673,10 @@ lemma truth_ex : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) �
     . intro ⟨i, sat_i⟩
       have ih_s := @ih (ψ[i//x]) subst_depth''
       simp at sat_i
-      have := @nom_substitution ψ x i (StandardCompletedModel mcs wit) (coe Δ mcs wit Δ_in) (StandardCompletedI mcs wit) g' (is_variant_symm.mp g'_var) (Eq.symm sat_i)
-      rw [←this, ←ih_s, ←Proof.MCS_pf_iff Δ_mcs] at g'_ψ
-      clear this g'_var sat_i
-      rw [←Proof.MCS_pf_iff Δ_mcs]
+      rw [←nom_substitution (is_variant_symm.mp g'_var) (Eq.symm sat_i), ←ih_s] at g'_ψ
+      have g'_ψ := Proof.Γ_premise g'_ψ
+      clear g'_var sat_i
+      apply Proof.MCS_pf Δ_mcs
       apply Proof.Γ_mp
       . apply Proof.Γ_theorem
         apply Proof.ax_q2_contrap
@@ -696,11 +693,11 @@ lemma truth_ex : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) �
       rw [←r_ih] at g'_ψ
       have := Proof.MCS_with_svar_witness (substable_after_replace ψ) Δ_mcs g'_ψ
       apply Proof.MCS_mp Δ_mcs; apply Proof.MCS_thm Δ_mcs
-      exact @exists_replace x ψ y
-      exact this
+    --  exact @exists_replace x ψ y
+      apply exists_replace; exact y; exact this
 
 /-
-lemma ohfuck (i : NOM) {Θ Θ' : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (mcs' : Θ'.MCS) (wit' : Θ'.witnessed) : (StandardCompletedModel mcs wit).Vₙ i = (StandardCompletedModel mcs' wit').Vₙ i := by
+lemma ohfuck (i : NOM) {Θ Θ' : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) (mcs' : Θ'.MCS) (wit' : Θ'.witnessed) : (StandardCompletedModel mcs wit).Vₙ i = (StandardCompletedModel mcs' wit').Vₙ i := by
   simp [StandardCompletedModel, CompletedModel, WitnessedModel, Set.GeneratedSubmodel, Canonical]
   apply choice_elim
   intro Γ h1 
@@ -712,7 +709,7 @@ lemma ohfuck (i : NOM) {Θ Θ' : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) (
   . admit
   . admit
 
-lemma truth_ex : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (∀ (i : NOM) {Θ' : Set Form} (mcs' : Θ'.MCS) (wit' : Θ'.witnessed), statement i mcs' wit') → (∀ {i : NOM} {x : SVAR}, statement (φ[i//x]) mcs wit) → statement (ex x, φ) mcs wit := by
+lemma truth_ex : ∀ {Θ : Set (Form TotalSet)}, (mcs : MCS Θ) → (wit : witnessed Θ) → (∀ (i : NOM) {Θ' : Set (Form TotalSet)} (mcs' : Θ'.MCS) (wit' : Θ'.witnessed), statement i mcs' wit') → (∀ {i : NOM} {x : SVAR}, statement (φ[i//x]) mcs wit) → statement (ex x, φ) mcs wit := by
   intro Θ mcs wit ih_nom ih
   apply Iff.intro
   . intro h
@@ -751,10 +748,10 @@ lemma truth_ex : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) �
       admit
     . admit
 
-lemma truth_pos : ∀ {Θ : Set Form}, (mcs : Θ.MCS) → (wit : Θ.witnessed) → (statement φ mcs wit) → statement (◇ φ) mcs wit := by
+lemma truth_pos : ∀ {Θ : Set (Form TotalSet)}, (mcs : MCS Θ) → (wit : witnessed Θ) → (statement φ mcs wit) → statement (◇ φ) mcs wit := by
   admit
 
-theorem TruthLemma {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : statement φ mcs wit := by
+theorem TruthLemma {Θ : Set (Form TotalSet)} (mcs : MCS Θ) (wit : witnessed Θ) : statement φ mcs wit := by
   --unfold statement
   cases φ with
   | bttm =>
@@ -798,15 +795,15 @@ theorem TruthLemma {Θ : Set Form} (mcs : Θ.MCS) (wit : Θ.witnessed) : stateme
 -/
 /-
 def Canonical : GeneralModel where
-  W := {Γ : Set Form // Γ.MCS}
+  W := {Γ : Set (Form TotalSet) // Γ.MCS}
   R := λ Γ => λ Δ => (∀ φ : Form, □φ ∈ Γ.1 → φ ∈ Δ.1)
   Vₚ:= λ p => {Γ | ↑p ∈ Γ.1}
   Vₙ:= λ i => {Γ | ↑i ∈ Γ.1}
 
-def Set.generate : Set Form → (Set Form → Set Form → Prop) →  (Set Form → Set Form → Prop) :=
+def Set.generate : Set (Form TotalSet) → (Set (Form TotalSet) → Set (Form TotalSet) → Prop) →  (Set (Form TotalSet) → Set (Form TotalSet) → Prop) :=
   λ Θ => λ R => λ Γ => λ Δ => sorry
 
-def WitnessedModel {Θ : Set Form} (hmcs : Θ.MCS) (hw : Θ.witnessed) : GeneralModel where
+def WitnessedModel {Θ : Set (Form TotalSet)} (hmcs : MCS Θ) (hw : witnessed Θ) : GeneralModel where
   W := {Γ : Canonical.W // Γ.1.witnessed}
   R := λ Γ => λ Δ => (∀ φ : Form, □φ ∈ Γ.1.1 → φ ∈ Δ.1.1)
   Vₚ:= λ p => sorry

@@ -1,17 +1,14 @@
 import Hybrid.Form
 
-variable (Γ : Set Form)
-#check List {φ : Form // Γ φ}
-
-theorem subst_depth {i : NOM} {x : SVAR} {φ : Form} : φ[i // x].depth = φ.depth := by
+theorem subst_depth {i : NOM N} {x : SVAR} {φ : Form N} : φ[i // x].depth = φ.depth := by
   induction φ <;> simp [subst_nom, Form.depth, *] at *
   <;> (split <;> simp [Form.depth, *])
 
-theorem subst_depth' {x y : SVAR} {φ : Form} : φ[y // x].depth = φ.depth := by
+theorem subst_depth' {x y : SVAR} {φ : Form N} : φ[y // x].depth = φ.depth := by
   induction φ <;> simp [subst_svar, Form.depth, *] at *
   <;> (split <;> simp [Form.depth, *])
 
-theorem subst_depth'' {x : SVAR} {i : NOM} {φ : Form} : (φ[i//x]).depth < (ex x, φ).depth := by
+theorem subst_depth'' {x : SVAR} {i : NOM N} {φ : Form N} : (φ[i//x]).depth < (ex x, φ).depth := by
   apply Nat.lt_of_le_of_lt
   apply Nat.le_of_eq
   apply subst_depth
@@ -95,7 +92,7 @@ section Variables
     have b := Nat.lt_irrefl φ.new_var.letter
     exact b a
   
-  lemma ge_new_var_subst_nom {i : NOM} {y : SVAR} : φ.new_var ≥ φ[i // y].new_var := by
+  lemma ge_new_var_subst_nom {i : NOM N} {y : SVAR} : φ.new_var ≥ φ[i // y].new_var := by
     induction φ <;> simp [Form.new_var, subst_nom, *] at *
     . split <;> simp [Form.new_var, SVAR.le]
     . simp [max]; split <;> split <;> simp [SVAR.le, *] at *; apply Nat.le_trans <;> assumption; apply Nat.le_of_lt; apply Nat.lt_of_le_of_lt <;> assumption
@@ -134,7 +131,7 @@ lemma new_var_geq2 : x ≥ (all y, ψ).new_var → (x ≥ (y+1) ∧ x ≥ ψ.new
 
 lemma new_var_geq3 : x ≥ (□ φ).new_var → (x ≥ φ.new_var) := by simp [Form.new_var]
 
-lemma new_var_subst {φ : Form} {i : NOM} {x y : SVAR} (h : x ≥ φ.new_var) : is_substable (φ[y//i]) x y := by
+lemma new_var_subst {φ : Form N} {i : NOM N} {x y : SVAR} (h : x ≥ φ.new_var) : is_substable (φ[y//i]) x y := by
   induction φ with
   | nom  j  =>
       simp [nom_subst_svar]
@@ -173,7 +170,7 @@ lemma new_var_subst {φ : Form} {i : NOM} {x y : SVAR} (h : x ≥ φ.new_var) : 
   | _  =>
       simp [is_substable]
 
-lemma new_var_subst'' {φ : Form} {x y : SVAR} (h : x ≥ φ.new_var) : is_substable φ x y := by
+lemma new_var_subst'' {φ : Form N} {x y : SVAR} (h : x ≥ φ.new_var) : is_substable φ x y := by
   induction φ with
   | bind z ψ ih =>
       simp only [Form.new_var, max, is_substable, beq_iff_eq, ite_eq_left_iff,
@@ -209,7 +206,7 @@ lemma new_var_subst'' {φ : Form} {x y : SVAR} (h : x ≥ φ.new_var) : is_subst
   | _  =>
       simp [is_substable]
 
-lemma scz {φ : Form} (i : NOM) (h : x ≥ φ.new_var) (hy : y ≠ x) : (is_free y φ) ↔ (is_free y (φ[x // i])) := by
+lemma scz {φ : Form N} (i : NOM N) (h : x ≥ φ.new_var) (hy : y ≠ x) : (is_free y φ) ↔ (is_free y (φ[x // i])) := by
   induction φ with
   | nom a       =>
       simp [nom_subst_svar] ; split <;> simp [is_free, hy]
@@ -227,12 +224,12 @@ lemma scz {φ : Form} (i : NOM) (h : x ≥ φ.new_var) (hy : y ≠ x) : (is_free
       simp [is_free, ih]
   | _ => simp [is_free]
 
-lemma new_var_subst' {φ : Form} (i : NOM) {x y : SVAR} (h1 : is_substable φ v y) (h2 : x ≥ φ.new_var) (h3 : y ≠ x) : is_substable (φ[x//i]) v y := by
+lemma new_var_subst' {φ : Form N} (i : NOM N) {x y : SVAR} (h1 : is_substable φ v y) (h2 : x ≥ φ.new_var) (h3 : y ≠ x) : is_substable (φ[x//i]) v y := by
   induction φ with
   | nom  a      => simp [nom_subst_svar]; split <;> simp [is_substable]
   | bind z ψ ih =>
       have xge := (new_var_geq2 h2).right
-      have := @scz x y ψ i xge h3
+      have := @scz N x y ψ i xge h3
       simp [←this, nom_subst_svar, is_substable, -implication_disjunction]
       clear this
       intro h
@@ -251,7 +248,7 @@ lemma new_var_subst' {φ : Form} (i : NOM) {x y : SVAR} (h1 : is_substable φ v 
       simp [is_substable, ih]
   | _       =>  simp [nom_subst_svar, h1]
 
-lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i][x // y] = φ[x // i] := by
+lemma nom_subst_trans (i : NOM N) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i][x // y] = φ[x // i] := by
   induction φ with
   | bttm => simp [nom_subst_svar, subst_svar]
   | prop => simp [nom_subst_svar, subst_svar]
@@ -278,7 +275,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
       simp [Form.new_var] at h
       simp [nom_subst_svar, subst_svar, ih, h]
 
-  lemma ge_new_var_subst_helpr {i : NOM} {x : SVAR} (h : y ≥ Form.new_var (χ⟶ψ)) : y ≥ Form.new_var (χ⟶ψ[i//x]⟶⊥) := by
+  lemma ge_new_var_subst_helpr {i : NOM N} {x : SVAR} (h : y ≥ Form.new_var (χ⟶ψ)) : y ≥ Form.new_var (χ⟶ψ[i//x]⟶⊥) := by
     simp [Form.new_var, max]
     split <;> split
     . exact (new_var_geq1 h).left
@@ -288,7 +285,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
     . exact (new_var_geq1 h).left
     . simp [SVAR.le]
 
-  lemma notfreeset {Γ : Set Form} (L : List Γ) (hyp : ∀ ψ : Γ, is_free x ψ = false) : is_free x (conjunction Γ L) = false := by
+  lemma notfreeset {Γ : Set (Form N)} (L : List Γ) (hyp : ∀ ψ : Γ, is_free x ψ.1 = false) : is_free x (conjunction Γ L) = false := by
     induction L with
     | nil         =>
         simp only [conjunction, is_free]
@@ -298,7 +295,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
         . exact hyp h
         . exact ih
 
-  lemma notfree_after_subst {φ : Form} {x y : SVAR} (h : x ≠ y) : is_free x (φ[y // x]) = false := by
+  lemma notfree_after_subst {φ : Form N} {x y : SVAR} (h : x ≠ y) : is_free x (φ[y // x]) = false := by
     induction φ with
     | svar z   =>
         by_cases xz : x = z
@@ -314,7 +311,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
         . simp [subst_svar, if_neg xz, is_free, ih]
     | _        => simp only [is_free]
 
-  lemma notocc_beforeafter_subst {φ : Form} {x y : SVAR} (h : occurs x φ = false) : occurs x (φ[y // x]) = false := by
+  lemma notocc_beforeafter_subst {φ : Form N} {x y : SVAR} (h : occurs x φ = false) : occurs x (φ[y // x]) = false := by
     induction φ with
     | svar z   =>
         by_cases xz : x = z
@@ -355,11 +352,11 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
         intro h
         rfl
 
-  lemma preserve_notfree {φ : Form} (x v : SVAR) : (is_free x φ = false) → (is_free x (all v, φ) = false) := by
+  lemma preserve_notfree {φ : Form N} (x v : SVAR) : (is_free x φ = false) → (is_free x (all v, φ) = false) := by
     intro h
     simp only [is_free, h, Bool.and_false]
 
-  lemma subst_notfree_var {φ : Form} {x y : SVAR} (h : is_free x φ = false) : (φ[y // x] = φ) ∧ (occurs x φ = false → is_substable φ y x) := by
+  lemma subst_notfree_var {φ : Form N} {x y : SVAR} (h : is_free x φ = false) : (φ[y // x] = φ) ∧ (occurs x φ = false → is_substable φ y x) := by
     induction φ with
     | svar z =>
         by_cases heq : x = z
@@ -392,7 +389,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
     | _   =>
         simp [subst_svar, is_substable]
 
-    lemma rereplacement (φ : Form) (x y : SVAR) (h1 : occurs y φ = false) (h2 : is_substable φ y x) : (is_substable (φ[y // x]) x y) ∧ φ[y // x][x // y] = φ := by
+    lemma rereplacement (φ : Form N) (x y : SVAR) (h1 : occurs y φ = false) (h2 : is_substable φ y x) : (is_substable (φ[y // x]) x y) ∧ φ[y // x][x // y] = φ := by
       induction φ with
       | svar z =>
           simp [occurs] at h1
@@ -413,11 +410,11 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
 
             simp only [is_substable, beq_iff_eq, ←yz, bne_self_eq_false, Bool.false_and, ite_eq_left_iff,
               Bool.not_eq_false, implication_disjunction, Bool.not_eq_true, or_false] at h2 
-            have h2 := @preserve_notfree ψ x y h2
+            have h2 := @preserve_notfree N ψ x y h2
             simp [subst_notfree_var, h2]
 
-            have := @subst_notfree_var (all y, ψ) y x (notoccurs_notfree h1)
-            simp [@subst_notfree_var (all y, ψ) y x, notoccurs_notfree, h1]
+            have := @subst_notfree_var N (all y, ψ) y x (notoccurs_notfree h1)
+            simp [@subst_notfree_var N (all y, ψ) y x, notoccurs_notfree, h1]
           . by_cases xz : x = z
             . have : is_free x (all x, ψ) = false := by simp [is_free]
               rw [←xz] at h1
@@ -433,7 +430,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
           apply And.intro
           repeat rfl
   
-  lemma subst_self_is_self (φ : Form) (x : SVAR) : φ [x // x] = φ := by
+  lemma subst_self_is_self (φ : Form N) (x : SVAR) : φ [x // x] = φ := by
     induction φ with
     | svar y   =>
         by_cases xy : x = y
@@ -449,7 +446,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
         . rw [subst_svar, if_neg xy, ih]
     | _        => rfl
 
-  lemma pos_subst {m : ℕ} {i : NOM} {v : SVAR} : (iterate_pos m (v⋀φ))[i//v] = iterate_pos m (i⋀φ[i//v]) := by
+  lemma pos_subst {m : ℕ} {i : NOM N} {v : SVAR} : (iterate_pos m (v⋀φ))[i//v] = iterate_pos m (i⋀φ[i//v]) := by
     induction m with
     | zero =>
         simp [iterate_pos, iterate_pos.loop, subst_nom]
@@ -457,7 +454,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
         simp [iterate_pos, iterate_pos.loop, subst_nom] at ih ⊢
         rw [ih]
 
-  lemma nec_subst {m : ℕ} {i : NOM} {v : SVAR} : (iterate_nec m (v⟶φ))[i//v] = iterate_nec m (i⟶φ[i//v]) := by
+  lemma nec_subst {m : ℕ} {i : NOM N} {v : SVAR} : (iterate_nec m (v⟶φ))[i//v] = iterate_nec m (i⟶φ[i//v]) := by
     induction m with
     | zero =>
         simp [iterate_nec, iterate_nec.loop, subst_nom]
@@ -465,7 +462,7 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
         simp [iterate_nec, iterate_nec.loop, subst_nom] at ih ⊢
         rw [ih]
 
-  theorem Form.new_var_properties (φ : Form) : ∃ x : SVAR, x ≥ φ.new_var ∧ occurs x φ = false ∧ (∀ y : SVAR, is_substable φ x y) := by
+  theorem Form.new_var_properties (φ : Form N) : ∃ x : SVAR, x ≥ φ.new_var ∧ occurs x φ = false ∧ (∀ y : SVAR, is_substable φ x y) := by
     exists φ.new_var
     simp [SVAR.le, new_var_is_new]
     intro
@@ -474,19 +471,19 @@ lemma nom_subst_trans (i : NOM) (x y : SVAR) (h : y ≥ φ.new_var) : φ[y // i]
 end Variables
 
 section Nominals
-  lemma nom_svar_subst_symm {v x y : SVAR} {i : NOM} (h : y ≠ x) : φ[x//i][v//y] = φ[v//y][x//i] := by
+  lemma nom_svar_subst_symm {v x y : SVAR} {i : NOM N} (h : y ≠ x) : φ[x//i][v//y] = φ[v//y][x//i] := by
     induction φ <;> simp [subst_svar, nom_subst_svar, *] at *
     . split <;> simp[nom_subst_svar]
     . split <;> simp [subst_svar, h]
     . split <;> simp [nom_subst_svar]
 
-  lemma nom_nom_subst_symm {x y : SVAR} {j i : NOM} (h1 : j ≠ i) (h2 : y ≠ x) : φ[x//i][j//y] = φ[j//y][x//i] := by
+  lemma nom_nom_subst_symm {x y : SVAR} {j i : NOM N} (h1 : j ≠ i) (h2 : y ≠ x) : φ[x//i][j//y] = φ[j//y][x//i] := by
     induction φ <;> simp [nom_subst_svar, subst_nom, *] at *
     . split <;> simp [nom_subst_svar, *]
     . split <;> simp [subst_nom, *]
     . split <;> simp [nom_subst_svar]
 
-  lemma subst_collect_all {x y : SVAR} {i : NOM} : φ[i//y][x//i] = φ[x//i][x//y] := by
+  lemma subst_collect_all {x y : SVAR} {i : NOM N} : φ[i//y][x//i] = φ[x//i][x//y] := by
     induction φ <;> simp [subst_svar, subst_nom, nom_subst_svar, *] at *
     . split <;> simp [nom_subst_svar]
     . split <;> simp [subst_svar]
@@ -503,7 +500,7 @@ section Nominals
   theorem subst_collect_all_nocc (h : nom_occurs i χ = false) (x y : SVAR) : χ[i // x][y // i] = χ[y // x] := by
     rw [subst_collect_all, nom_subst_nocc h y]
 
-  lemma nom_svar_rereplacement {φ : Form} {i : NOM} (h : x ≥ φ.new_var) : φ[x // i][i // x] = φ := by
+  lemma nom_svar_rereplacement {φ : Form N} {i : NOM N} (h : x ≥ φ.new_var) : φ[x // i][i // x] = φ := by
     induction φ <;> simp [nom_subst_svar, subst_nom] 
     . have := ge_new_var_is_new h
       simp [occurs] at this
@@ -520,7 +517,7 @@ section Nominals
           simp [SVAR.add] at this
       . simp [new_var_geq2 h, *]
 
-  lemma pos_subst_nom {m : ℕ} {i : NOM} {v x : SVAR} : (iterate_pos m (v⋀φ))[x//i] = iterate_pos m (Form.svar v⋀φ[x//i]) := by
+  lemma pos_subst_nom {m : ℕ} {i : NOM N} {v x : SVAR} : (iterate_pos m (v⋀φ))[x//i] = iterate_pos m (Form.svar v⋀φ[x//i]) := by
     induction m with
     | zero =>
         simp [iterate_pos, iterate_pos.loop, nom_subst_svar]
@@ -528,7 +525,7 @@ section Nominals
         simp [iterate_pos, iterate_pos.loop, nom_subst_svar] at ih ⊢
         rw [ih]
 
-  lemma nec_subst_nom {m : ℕ} {i : NOM} {v x : SVAR} : (iterate_nec m (v⟶φ))[x//i] = iterate_nec m (Form.svar v⟶φ[x//i]) := by
+  lemma nec_subst_nom {m : ℕ} {i : NOM N} {v x : SVAR} : (iterate_nec m (v⟶φ))[x//i] = iterate_nec m (Form.svar v⟶φ[x//i]) := by
     induction m with
     | zero =>
         simp [iterate_nec, iterate_nec.loop, nom_subst_svar]
@@ -592,19 +589,19 @@ section Nominals
   end New_NOM
 
 -- just remove this definition, it is completely redundant...
-  def descending (l : List NOM) : Prop :=
+  def descending (l : List (NOM N)) : Prop :=
     match l with
     | []        =>    True
     | h :: t    =>    (∀ i ∈ t, h > i) ∧ descending t
 
-  def descending' (l : List NOM) : Prop := l.Chain' GT.gt
+  def descending' (l : List (NOM N)) : Prop := l.Chain' GT.gt
 
-  theorem eq_len {φ : Form} : φ.list_noms.length = φ.odd_list_noms.length := by simp [Form.odd_list_noms]
+  theorem eq_len {φ : Form TotalSet} : φ.list_noms.length = φ.odd_list_noms.length := by simp [Form.odd_list_noms]
 
-  theorem odd_is_odd {φ : Form} (h1 : n < φ.list_noms.length) (h2 : n < φ.odd_list_noms.length) : φ.odd_list_noms.get ⟨n, h2⟩ = 2 * φ.list_noms.get ⟨n, h1⟩ + 1 := by
+  theorem odd_is_odd {φ : Form TotalSet} (h1 : n < φ.list_noms.length) (h2 : n < φ.odd_list_noms.length) : φ.odd_list_noms.get ⟨n, h2⟩ = 2 * φ.list_noms.get ⟨n, h1⟩ + 1 := by
     simp [Form.odd_list_noms, Form.list_noms]
 
-  theorem descending_equiv (l : List NOM) : descending l ↔ descending' l := by
+  theorem descending_equiv (l : List (NOM N)) : descending l ↔ descending' l := by
     induction l with
     | nil         =>  simp [descending, descending']
     | cons h t ih =>
@@ -660,15 +657,15 @@ section Nominals
         apply Nat.lt_irrefl (h :: t)[pos].letter
         assumption
 
-  theorem descending_list_noms {φ : Form} : descending φ.list_noms := by
+  theorem descending_list_noms {φ : Form TotalSet} : descending φ.list_noms := by
     rw [descending_equiv, descending']
     exact list_noms_chain'
   
-  theorem descending_odd_list_noms {φ : Form} : descending φ.odd_list_noms := by
+  theorem descending_odd_list_noms {φ : Form TotalSet} : descending φ.odd_list_noms := by
     have dln := @descending_list_noms φ
-    have : ∀ a b : NOM, (2 * b + 1 < 2 * a + 1) ↔ (b < a) := by simp [NOM.lt, NOM.add, NOM.hmul]
-    have := @List.Pairwise.iff NOM (fun a b => 2 * b + 1 < 2 * a + 1) (fun a b => b < a) this
-    simp [Form.odd_list_noms, descending_equiv, descending', List.chain'_iff_pairwise, List.pairwise_map, GT.gt, this] at dln ⊢
+    have : ∀ a b : NOM TotalSet, (2 * b + 1 < 2 * a + 1) ↔ (b < a) := by simp [NOM.lt, NOM.add, NOM.hmul]
+    have := @List.Pairwise.iff (NOM TotalSet) (fun a b => 2 * b + 1 < 2 * a + 1) (fun a b => b < a) this
+    simp only [Form.odd_list_noms, descending_equiv, descending', List.chain'_iff_pairwise, List.pairwise_map, GT.gt, this] at dln ⊢
     assumption
 
   theorem occurs_list_noms : nom_occurs i φ ↔ i ∈ φ.list_noms := by
@@ -682,7 +679,7 @@ section Nominals
     | bind _ _ ih => exact ih
     | _        => simp [Form.list_noms, nom_occurs]
 
-  theorem list_noms_subst {old new : NOM} : i ∈ (φ[new // old]).list_noms → ((i ∈ φ.list_noms ∧ i ≠ old) ∨ i = new) := by
+  theorem list_noms_subst {old new : NOM N} : i ∈ (φ[new // old]).list_noms → ((i ∈ φ.list_noms ∧ i ≠ old) ∨ i = new) := by
     rw [←occurs_list_noms, ←occurs_list_noms]
     intro h
     induction φ with
@@ -719,7 +716,7 @@ section Nominals
         exact ih h
     | _     => simp [nom_occurs] at h
 
-  theorem occ_bulk {l_new l_old : List NOM} {φ : Form} (eq_len : l_new.length = l_old.length) : nom_occurs i (φ.bulk_subst l_new l_old) → ((i ∈ φ.list_noms ∧ i ∉ l_old) ∨ i ∈ l_new) := by
+  theorem occ_bulk {l_new l_old : List (NOM N)} {φ : Form N} (eq_len : l_new.length = l_old.length) : nom_occurs i (φ.bulk_subst l_new l_old) → ((i ∈ φ.list_noms ∧ i ∉ l_old) ∨ i ∈ l_new) := by
     intro h
     induction l_new generalizing φ l_old with
     | nil => cases l_old <;> simp [Form.bulk_subst] at *; repeat exact occurs_list_noms.mp h
@@ -736,7 +733,7 @@ section Nominals
             . intro hyp
               clear this ih
               cases t_new
-              . have := List.length_eq_zero.mp (Eq.symm (Eq.subst eq_len (@List.length_nil NOM)))
+              . have := List.length_eq_zero.mp (Eq.symm (Eq.subst eq_len (@List.length_nil (NOM N))))
                 simp [this, Form.bulk_subst] at h ⊢
                 apply Or.elim (list_noms_subst (occurs_list_noms.mp h))
                 . intro c1
@@ -759,8 +756,7 @@ section Nominals
               apply Or.inr
               assumption
 
-  -- FORM.odd_list_noms DOESN'T HAVE THIS PROPERTY
-  theorem nocc_bulk {l_new l_old : List NOM} {φ : Form} (eq_len : l_new.length = l_old.length) : ((i ∉ φ.list_noms ∨ i ∈ l_old) ∧ i ∉ l_new) → nom_occurs i (φ.bulk_subst l_new l_old) = false := by
+  theorem nocc_bulk {l_new l_old : List (NOM N)} {φ : Form N} (eq_len : l_new.length = l_old.length) : ((i ∉ φ.list_noms ∨ i ∈ l_old) ∧ i ∉ l_new) → nom_occurs i (φ.bulk_subst l_new l_old) = false := by
     rw [contraposition]
     simp [-implication_disjunction]
     intro h1 h2
@@ -768,7 +764,7 @@ section Nominals
     . simp
     . simp [h2]
 
-  theorem has_nocc_bulk_property : ∀ φ : Form, nocc_bulk_property φ.odd_list_noms φ.list_noms φ := by
+  theorem has_nocc_bulk_property : ∀ φ : Form TotalSet, nocc_bulk_property φ.odd_list_noms φ.list_noms φ := by
     unfold nocc_bulk_property
     intro φ n i h
     match n with
@@ -809,7 +805,7 @@ section Nominals
         apply Or.elim l
         . intro disj
           apply Or.inl
-          apply not_imp_not.mpr (@list_noms_subst i φ h_old h_new)
+          apply not_imp_not.mpr (@list_noms_subst TotalSet i φ h_old h_new)
           simp
           apply And.intro
           . intro habs
@@ -825,16 +821,44 @@ section Nominals
 
 end Nominals
 
-  theorem odd_nom {i : NOM} : (Form.nom i).odd_noms = Form.nom ⟨2*i.letter+1⟩ := by
+  lemma dbl_subst_nom {j : NOM N} {x : SVAR} (i : NOM N) (h : nom_occurs j φ = false) : φ[j//i][x//j] = φ[x//i] := by
+    induction φ <;> simp [nom_occurs, nom_subst_nom, nom_subst_svar, -implication_disjunction, *] at *
+    . split <;> simp [nom_subst_svar, Ne.symm h]
+    repeat simp [h, *] at *
+
+  lemma svar_svar_nom_subst {i j : NOM N} {x : SVAR} (h : x ≥ φ.new_var) : φ[x//i][j//x] = φ[j//i] := by
+    induction φ <;> simp [nom_subst_svar, nom_subst_nom, subst_nom, -implication_disjunction, *] at *
+    . apply Ne.symm; apply diffsvar; assumption
+    . split <;> simp [subst_nom]
+    . simp [new_var_geq1 h, *] at *
+    . simp [Form.new_var] at h
+      simp [h, *] at *
+    . split
+      . exfalso
+        have := Ne.symm (diffsvar (new_var_geq2 h).left)
+        contradiction
+      . simp [new_var_geq2 h, *] at *
+  
+  lemma nom_subst_self {i : NOM N} : φ[i // i] = φ := by
+    induction φ <;> simp [nom_subst_nom, -implication_disjunction, *] at * 
+    . intro h ; apply Eq.symm; assumption
+
+  lemma eq_new_var {i j : NOM N} : φ.new_var = (φ[i // j]).new_var := by
+    induction φ <;> simp [Form.new_var, nom_subst_nom, *] at * 
+    . split <;> simp [Form.new_var]
+
+
+
+  theorem odd_nom {i : NOM TotalSet} : (Form.nom i).odd_noms = Form.nom (2 * i + 1) := by
     simp [Form.odd_noms, Form.odd_list_noms, Form.list_noms, Form.bulk_subst, nom_subst_nom, NOM_eq, NOM.hmul, NOM.add, Nat.mul_comm]
 
-  theorem bulk_subst_impl {φ ψ : Form} : (φ ⟶ ψ).bulk_subst l₁ l₂ = φ.bulk_subst l₁ l₂ ⟶ ψ.bulk_subst l₁ l₂ := by
+  theorem bulk_subst_impl {φ ψ : Form TotalSet} : (φ ⟶ ψ).bulk_subst l₁ l₂ = φ.bulk_subst l₁ l₂ ⟶ ψ.bulk_subst l₁ l₂ := by
     admit
 
-  theorem list_noms_impl_r {φ ψ : Form} : φ.bulk_subst φ.odd_list_noms φ.list_noms = φ.bulk_subst (φ ⟶ ψ).odd_list_noms (φ ⟶ ψ).list_noms := by
+  theorem list_noms_impl_r {φ ψ : Form TotalSet} : φ.bulk_subst φ.odd_list_noms φ.list_noms = φ.bulk_subst (φ ⟶ ψ).odd_list_noms (φ ⟶ ψ).list_noms := by
     admit
 
-  theorem list_noms_impl_l {φ ψ : Form} : φ.bulk_subst φ.odd_list_noms φ.list_noms = φ.bulk_subst (ψ ⟶ φ).odd_list_noms (ψ ⟶ φ).list_noms := by
+  theorem list_noms_impl_l {φ ψ : Form TotalSet} : φ.bulk_subst φ.odd_list_noms φ.list_noms = φ.bulk_subst (ψ ⟶ φ).odd_list_noms (ψ ⟶ φ).list_noms := by
     admit
 
   theorem odd_impl : (φ ⟶ ψ).odd_noms = φ.odd_noms ⟶ ψ.odd_noms := by
@@ -846,8 +870,12 @@ end Nominals
 
   theorem odd_bind : (all x, φ).odd_noms = all x, (φ.odd_noms) := by admit
 
-  theorem odd_conj (Γ : Set Form) (L : List Γ) : ∃ L' : List Γ.odd_noms, (conjunction Γ L).odd_noms = conjunction Γ.odd_noms L' := by
+  def List.to_odd {Γ : Set (Form TotalSet)} {L : List Γ} : List Γ.odd_noms := sorry
+
+  def List.odd_to {Γ : Set (Form TotalSet)} {L : List Γ.odd_noms} : List Γ := sorry
+
+  theorem odd_conj (Γ : Set (Form TotalSet)) (L : List Γ) : (conjunction Γ L).odd_noms = conjunction Γ.odd_noms L.to_odd := by
     admit
 
-  theorem odd_conj_rev (Γ : Set Form) (L' : List Γ.odd_noms) : ∃ L : List Γ, (conjunction Γ L).odd_noms = conjunction Γ.odd_noms L' := by
+  theorem odd_conj_rev (Γ : Set (Form TotalSet)) (L' : List Γ.odd_noms) : (conjunction Γ L'.odd_to).odd_noms = conjunction Γ.odd_noms L' := by
     admit

@@ -4,11 +4,11 @@ import Hybrid.Substitutions
 
 section Definitions
 
-  structure Model where
+  structure Model (N : Set ℕ) where
     W : Type
     R : W → W → Prop
     Vₚ: PROP → Set W
-    Vₙ: NOM  → W
+    Vₙ: NOM N  → W
 
   -- interpretation function
   -- from any state variable, to exactly ONE world
@@ -26,7 +26,7 @@ section Definitions
   def is_variant (g₁ g₂ : I W) (x : SVAR) := ∀ y : SVAR, ((x ≠ y) → (g₁ y = g₂ y))
 
   @[simp]
-  def Sat (M : Model) (s : M.W) (g : I M.W) : (φ : Form) → Prop
+  def Sat (M : Model N) (s : M.W) (g : I M.W) : (φ : Form N) → Prop
     | Form.bttm     => False
     | Form.prop p   => s ∈ (M.Vₚ p)
     | Form.nom  i   => s = (M.Vₙ i)
@@ -37,10 +37,6 @@ section Definitions
 
   notation "(" M "," s "," g ")" "⊨" φ => Sat M s g φ
   notation "(" M "," s "," g ")" "⊭" φ => ¬ Sat M s g φ
-
-  def truths_set (M : Model) (s : M.W) (g : I M.W) : Set Form := {φ | (M,s,g) ⊨ φ}
-
-  theorem sat_iff_mem : ((M,s,g) ⊨ φ) ↔ (φ ∈ truths_set M s g) := by simp [truths_set]
 
   theorem neg_sat : ((M,s,g) ⊨ ∼φ) ↔ ((M,s,g) ⊭ φ) := by
     simp only [Sat, or_false]
@@ -61,27 +57,27 @@ section Definitions
       apply And.intro <;> simp [h1]
 
   @[simp]
-  def Valid (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
+  def Valid (φ : Form N) := ∀ (M : Model N) (s : M.W) (g : I M.W), ((M, s, g) ⊨ φ)
 
   prefix:1000 "⊨" => Valid
   prefix:1000 "⊭" => ¬ Valid
 
   @[simp]
-  def Sat_Set (M : Model) (s : M.W) (g : I M.W) (Γ : Set Form) := ∀ (φ : Form), (φ ∈ Γ) → ((M, s, g) ⊨ φ)  
+  def Sat_Set (M : Model N) (s : M.W) (g : I M.W) (Γ : Set (Form N)) := ∀ (φ : Form N), (φ ∈ Γ) → ((M, s, g) ⊨ φ)  
 
   notation "(" M "," s "," g ")" "⊨" Γ => Sat_Set M s g Γ
   notation "(" M "," s "," g ")" "⊭" Γ => ¬ Sat_Set M s g Γ
 
   --def Entails (Γ : set Form) (φ : Form) := ∀ M : Model, (M ⊨ Γ) → (M ⊨ φ) 
   @[simp]
-  def Entails (Γ : Set Form) (φ : Form) := ∀ (M : Model) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ) 
+  def Entails (Γ : Set (Form N)) (φ : Form N) := ∀ (M : Model N) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ) 
 
 
   infix:1000 "⊨" => Entails
   notation Γ "⊭" φ => ¬ (Entails Γ φ)
 
   @[simp]
-  def Set.satisfiable (Γ : Set Form) := ∃ (M : Model) (s : M.W) (g : I M.W), (M,s,g) ⊨ Γ
+  def satisfiable (Γ : Set (Form N)) := ∃ (M : Model N) (s : M.W) (g : I M.W), (M,s,g) ⊨ Γ
 
 end Definitions
 
@@ -155,7 +151,7 @@ section Theorems
 
   section Satisfaction
 
-    theorem bind_comm {M : Model} {s : M.W} {g : I M.W} {φ : Form} {x y : SVAR} : ((M,s,g) ⊨ all x, (all y, φ)) ↔ ((M,s,g) ⊨ all y, (all x, φ)) := by
+    theorem bind_comm {M : Model N} {s : M.W} {g : I M.W} {φ : Form N} {x y : SVAR} : ((M,s,g) ⊨ all x, (all y, φ)) ↔ ((M,s,g) ⊨ all y, (all x, φ)) := by
       apply Iff.intro
       . intro h1
         intros h var_h_g i var_i_h
@@ -174,7 +170,7 @@ section Theorems
           have mid_g_sat := h2 mid_g (is_variant_symm.mp mid_g_var_g)
           exact mid_g_sat i (is_variant_symm.mp mid_g_var_i)
 
-    theorem SatConjunction (Γ : Set Form) (L : List Γ) : Γ ⊨ conjunction Γ L := by
+    theorem SatConjunction (Γ : Set (Form N)) (L : List Γ) : Γ ⊨ conjunction Γ L := by
       intro M s g M_sat_Γ
       induction L with
       | nil => 
@@ -183,7 +179,7 @@ section Theorems
           simp only [conjunction, and_sat, ih, and_true]
           exact M_sat_Γ h h.prop 
 
-    theorem SetEntailment (Γ : Set Form) : (∃ L, ⊨ (conjunction Γ L ⟶ ψ)) → Γ ⊨ ψ := by
+    theorem SetEntailment (Γ : Set (Form N)) : (∃ L, ⊨ (conjunction Γ L ⟶ ψ)) → Γ ⊨ ψ := by
       intro h
       intro M s g M_sat_Γ
       match h with
@@ -195,7 +191,7 @@ section Theorems
 
     end Satisfaction
 
-  theorem D_help {Γ : Set Form} : ((M,s,g)⊨Γ ∪ {φ}) ↔ (((M,s,g)⊨Γ) ∧ (M,s,g) ⊨ {φ}) := by
+  theorem D_help {Γ : Set (Form N)} : ((M,s,g)⊨Γ ∪ {φ}) ↔ (((M,s,g)⊨Γ) ∧ (M,s,g) ⊨ {φ}) := by
     apply Iff.intro
     . intro h
       rw [Sat_Set] at h
@@ -207,7 +203,7 @@ section Theorems
         intros; first | {apply hl; assumption} | {apply hr; assumption}
       }
 
-  theorem SemanticDeduction {Γ : Set Form} : (Γ ⊨ (φ ⟶ ψ)) ↔ ((Γ ∪ {φ}) ⊨ ψ) := by
+  theorem SemanticDeduction {Γ : Set (Form N)} : (Γ ⊨ (φ ⟶ ψ)) ↔ ((Γ ∪ {φ}) ⊨ ψ) := by
     apply Iff.intro <;> {
       intro h M s g sat_set
       simp only [Sat]
@@ -223,21 +219,19 @@ section Theorems
 
 end Theorems
 
-def Model.odd_noms (M : Model) : Model where
+def Model.odd_noms (M : Model TotalSet) : Model TotalSet where
   W := M.W
   R := M.R
---  R := λ Γ => λ Δ => Γ.MCS ∧ Δ.MCS ∧ (∀ φ : Form, □φ ∈ Γ → φ ∈ Δ)
   Vₚ:= M.Vₚ
-  Vₙ:= λ i => M.Vₙ ⟨(i.letter-1)/2⟩
+  Vₙ:= λ i => M.Vₙ ((i-1)/2)
 
-def Model.odd_noms_inv (M : Model) : Model where
+def Model.odd_noms_inv (M : Model TotalSet) : Model TotalSet where
   W := M.W
   R := M.R
---  R := λ Γ => λ Δ => Γ.MCS ∧ Δ.MCS ∧ (∀ φ : Form, □φ ∈ Γ → φ ∈ Δ)
   Vₚ:= M.Vₚ
-  Vₙ:= λ i => M.Vₙ ⟨i.letter*2+1⟩
+  Vₙ:= λ i => M.Vₙ (i*2+1)
 
-theorem sat_odd_noms {φ : Form} : ((M,s,g) ⊨ φ) ↔ ((M.odd_noms,s,g) ⊨ φ.odd_noms) := by
+theorem sat_odd_noms {φ : Form TotalSet} : ((M,s,g) ⊨ φ) ↔ ((M.odd_noms,s,g) ⊨ φ.odd_noms) := by
   induction φ generalizing s g with
   | nom i =>
       simp [odd_nom, Model.odd_noms]
@@ -263,11 +257,11 @@ theorem sat_odd_noms {φ : Form} : ((M,s,g) ⊨ φ) ↔ ((M.odd_noms,s,g) ⊨ φ
         exact h1 g' h2 
   | _ => simp [Form.odd_noms, Model.odd_noms] 
 
-theorem sat_odd_noms' {φ : Form} : ((M,s,g) ⊨ φ.odd_noms) ↔ ((M.odd_noms_inv,s,g) ⊨ φ) := by
+theorem sat_odd_noms' {φ : Form TotalSet} : ((M,s,g) ⊨ φ.odd_noms) ↔ ((M.odd_noms_inv,s,g) ⊨ φ) := by
 --  conv => rhs; rw [sat_odd_noms]
   induction φ generalizing s g with
   | nom i =>
-      simp [odd_nom, Model.odd_noms, Model.odd_noms_inv, Nat.mul_comm]
+      simp [odd_nom, Model.odd_noms, Model.odd_noms_inv]
   | impl φ ψ ih1 ih2 =>
       rw [odd_impl, Sat, Sat, ih1, ih2]
   | box φ ih =>
@@ -290,6 +284,7 @@ theorem sat_odd_noms' {φ : Form} : ((M,s,g) ⊨ φ.odd_noms) ↔ ((M.odd_noms_i
         exact h1 g' h2 
   | _ => simp [Form.odd_noms, Model.odd_noms, Model.odd_noms_inv]
 
+/-
 theorem testtt {Γ : Set Form} : ((M,s,g) ⊨ Γ) ↔ ((M.odd_noms,s,g) ⊨ Γ.odd_noms) := by
   apply Iff.intro
   . intro h φ_odd φ_odd_prop
@@ -325,5 +320,5 @@ theorem plang : Γ ⊨ φ ↔ Γ.odd_noms ⊨ φ.odd_noms := by
     rw [sat_odd_noms]
     exact this
 
-
 #print axioms plang
+-/

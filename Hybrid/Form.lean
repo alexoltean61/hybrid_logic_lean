@@ -2,7 +2,6 @@ import Mathlib.Data.Set.Basic
 import Mathlib.Data.List.Sort
 import Mathlib.Data.List.Lemmas
 import Mathlib.Data.Fin.Basic
-import Mathlib.Logic.Equiv.Fin
 import Hybrid.Util
 
 open Classical
@@ -42,11 +41,11 @@ section Basics
 --  instance ofNatSVAR : OfNat SVAR n    where
 --    ofNat := SVAR.mk n
   instance : OfNat (NOM TotalSet) n     where
-    ofNat := NOM.mk  ⟨n, trivial⟩ 
+    ofNat := NOM.mk  ⟨n, trivial⟩
   instance : Coe SVAR Nat  := ⟨SVAR.letter⟩
 --  instance : Coe NOM Nat   := ⟨NOM.letter⟩
-  instance : Coe Nat SVAR  := ⟨SVAR.mk⟩   
---  instance : Coe Nat NOM   := ⟨NOM.mk⟩   
+  instance : Coe Nat SVAR  := ⟨SVAR.mk⟩
+--  instance : Coe Nat NOM   := ⟨NOM.mk⟩
   instance SVAR.le : LE SVAR         where
     le    := λ x => λ y =>  x.letter ≤ y.letter
   instance SVAR.lt : LT SVAR         where
@@ -58,13 +57,13 @@ section Basics
   instance SVAR.add : HAdd SVAR Nat SVAR where
     hAdd  := λ x => λ n => (x.letter + n)
   @[simp] instance NOM.add : HAdd (NOM TotalSet) Nat (NOM TotalSet) where
-    hAdd  := λ x => λ n => ⟨(x.letter + n), trivial⟩ 
+    hAdd  := λ x => λ n => ⟨(x.letter + n), trivial⟩
   @[simp] instance : HSub (NOM TotalSet) Nat (NOM TotalSet) where
-    hSub  := λ x => λ n => ⟨(x.letter - n), trivial⟩ 
+    hSub  := λ x => λ n => ⟨(x.letter - n), trivial⟩
   @[simp] instance : HMul (NOM TotalSet) Nat (NOM TotalSet) where
     hMul  := λ x => λ n => ⟨(x.letter * n), trivial⟩
   @[simp] instance : HDiv (NOM TotalSet) Nat (NOM TotalSet) where
-    hDiv  := λ x => λ n => ⟨(x.letter / n), trivial⟩ 
+    hDiv  := λ x => λ n => ⟨(x.letter / n), trivial⟩
   @[simp] instance NOM.hmul : HMul Nat (NOM TotalSet) (NOM TotalSet) where
     hMul  := λ n => λ x => ⟨(x.letter * n), trivial⟩
   @[simp] instance : HMul (NOM TotalSet) ℕ ℕ where
@@ -109,7 +108,7 @@ section Basics
     -- modal:
     | box  : Form N → Form N
     -- hybrid:
-    | bind : SVAR → Form N → Form N
+    | bind :   SVAR → Form N → Form N
   deriving DecidableEq, Repr
 
   def Form.depth : Form N → ℕ
@@ -118,12 +117,14 @@ section Basics
     | .bind _ φ =>  2 + Form.depth φ
     | _       =>    0
 
+  instance : Nonempty (Form N) := ⟨Form.bttm⟩
+
   @[simp]
   def Form.neg      : Form N → Form N := λ φ => Form.impl φ Form.bttm
   @[simp]
   def Form.conj     : Form N → Form N → Form N := λ φ => λ ψ => Form.neg (Form.impl φ (Form.neg ψ))
   @[simp]
-  def Form.iff      : Form N → Form N → Form N := λ φ => λ ψ => Form.conj (Form.impl φ ψ) (Form.impl ψ φ) 
+  def Form.iff      : Form N → Form N → Form N := λ φ => λ ψ => Form.conj (Form.impl φ ψ) (Form.impl ψ φ)
   @[simp]
   def Form.disj     : Form N → Form N → Form N := λ φ => λ ψ => Form.impl (Form.neg φ) ψ
   @[simp]
@@ -134,38 +135,6 @@ section Basics
   instance : Coe PROP     (Form N)  := ⟨Form.prop⟩
   instance : Coe SVAR     (Form N)  := ⟨Form.svar⟩
   instance : Coe (NOM N)  (Form N)  := ⟨Form.nom⟩
-
-  def Form.total : Form N → Form TotalSet
-    | .bttm     => Form.bttm
-    | .prop p   => Form.prop p
-    | .svar v   => Form.svar v
-    | .nom i    => Form.nom ⟨i.1.1, trivial⟩
-    | .impl ψ χ => Form.impl ψ.total χ.total
-    | .box ψ    => Form.box ψ.total
-    | .bind v ψ => Form.bind v ψ.total
-  
-  noncomputable def Form.total_inv : Form TotalSet → Option (Form N)
-    | .bttm     => some Form.bttm
-    | .prop p   => some p
-    | .svar v   => some v
-    | .nom i    => if h : i.1.1 ∈ N then
-                      Form.nom ⟨i.1.1, h⟩
-                    else none
-    | .impl ψ χ => 
-        match ψ.total_inv, χ.total_inv with
-        | some a, some b => some (Form.impl a b)
-        | _, _           => none
-    | .box ψ => 
-        match ψ.total_inv with
-        | some a => some (Form.box a)
-        | _      => none
-    | .bind v ψ => 
-        match ψ.total_inv with
-        | some a => some (Form.bind v a)
-        | _      => none
-
-  theorem is_inv {φ : Form N} : φ.total.total_inv = some φ := by
-    induction φ <;> simp [Form.total, Form.total_inv, *]
 
   infixr:60 "⟶" => Form.impl
   infixl:65 "⋀" => Form.conj
@@ -178,83 +147,6 @@ section Basics
   infixr:60 "⟷" => Form.iff
   notation "⊥"  => Form.bttm
 
-  theorem total_inj {φ ψ : Form N} : φ.total = ψ.total → φ = ψ := by
-    induction φ generalizing ψ with
-    | impl a b ih1 ih2 =>
-          cases ψ with 
-          | impl c d => simp [Form.total, -implication_disjunction]
-                        intros
-                        apply And.intro <;> (first | apply ih1 | apply ih2) <;> assumption
-          | _    => simp [Form.total]
-    | box a ih | bind v a ih =>
-        cases ψ with
-        | box b    => simp [Form.total, -implication_disjunction]; try apply ih
-        | bind u b => simp [Form.total, -implication_disjunction];
-                      try (intro; simp only [*, true_and]; apply ih)
-        | _     => simp  [Form.total]
-    | _    => cases ψ <;> simp [Form.total, NOM_eq, -implication_disjunction] <;>
-                          (intros; apply Subtype.eq; assumption)
-
-  theorem total_impl {φ : Form N} {ψ_t χ_t : Form TotalSet} : φ.total = (ψ_t ⟶ χ_t) → ∃ ψ χ : Form N, φ = (ψ ⟶ χ) := by
-    intro eq
-    cases φ <;> simp [Form.total] at *
-  theorem total_impl' {φ : Form N} {ψ_t χ_t : Form TotalSet} : φ.total = (ψ_t ⟶ χ_t) →
-    match φ with
-    | .impl ψ χ => True
-    | _         => False := by
-      intro eq
-      split
-      . trivial
-      . next h =>
-          have ⟨ψ, χ, hw⟩ :=  total_impl eq
-          exact h ψ χ hw
-  theorem total_box {φ : Form N} {ψ_t : Form TotalSet} : φ.total = □ψ_t → ∃ ψ : Form N, φ = □ψ := by
-    intro eq
-    cases φ <;> simp [Form.total] at *
-  theorem total_box' {φ : Form N} {ψ_t : Form TotalSet} : φ.total = □ ψ_t →
-    match φ with
-    | .box ψ    => True
-    | _         => False := by
-      intro eq
-      split
-      . trivial
-      . next h =>
-          have ⟨ψ, hw⟩ :=  total_box eq
-          exact h ψ hw
-  theorem total_bind {φ : Form N} {ψ_t : Form TotalSet} : (φ.total = all v, ψ_t) → ∃ ψ : Form N, (φ = all v, ψ) := by
-    intro eq
-    cases φ <;> simp [Form.total] at *;
-                exact eq.left
-
-  theorem total_ax_k {φ : Form N} {ψ_t χ_t : Form TotalSet} : φ.total = □(ψ_t ⟶ χ_t) ⟶ (□ψ_t ⟶ □χ_t) →
-    ∃ ψ χ : Form N, φ = □(ψ ⟶ χ) ⟶ (□ψ ⟶ □χ) := by
-      intro eq
-      have ⟨l, r, hw⟩ := total_impl eq
-      simp [hw, Form.total] at eq 
-      have ⟨p, q⟩ := eq 
-      clear eq
-
-      have ⟨t, w1⟩  := total_box p
-      simp [w1, Form.total] at p
-      have ⟨a, b, n⟩   := total_impl p
-      rw [n] at w1
-      rw [w1] at hw
-      
-      have ⟨u, v, w2⟩  := total_impl q  
-      simp [w2, Form.total] at q
-      have ⟨c, m1⟩     := total_box q.1
-      have ⟨d, m2⟩     := total_box q.2
-      rw [m1, m2] at w2
-      rw [w2] at hw
-
-      simp [congrArg Form.total m1, congrArg Form.total m2, Form.total] at q
-      simp [congrArg Form.total n, Form.total] at p
-      rw [←p.1, ←p.2] at q
-      clear p
-
-      rw [total_inj q.1, total_inj q.2] at hw
-      exists a; exists b
-  
   def conjunction (Γ : Set (Form N)) (L : List Γ) : Form N :=
   match L with
     | []     => ⊥ ⟶ ⊥
@@ -273,7 +165,7 @@ section Basics
   | .impl ψ χ => max (ψ.new_nom) (χ.new_nom)
   | .box  ψ   => ψ.new_nom
   | .bind _ ψ => ψ.new_nom
-  | _         => ⟨0, trivial⟩ 
+  | _         => ⟨0, trivial⟩
 
 end Basics
 
@@ -299,7 +191,7 @@ section Substitutions
     | Form.bind y φ => (y != x) && (is_free x φ)
 
   def is_bound (x : SVAR) (φ : Form N) := (occurs x φ) && !(is_free x φ)
-  
+
   -- conventions for substitutions can get confusing
   -- "φ[s // x], the formula obtained by substituting s for all *free* occurrences of x in φ"
   -- for reference: Blackburn 1998, pg. 628
@@ -348,7 +240,7 @@ section Substitutions
 
 end Substitutions
 
-section NominalSubstitution 
+section NominalSubstitution
 
   def nom_subst_nom : Form N → NOM N → NOM N → Form N
   | .nom a, i, j     => if a = j then i else a
@@ -399,7 +291,7 @@ section NominalSubstitution
 
   def Form.odd_noms : Form TotalSet → Form TotalSet := λ φ => φ.bulk_subst φ.odd_list_noms φ.list_noms
 
-  def Set.odd_noms : Set (Form TotalSet) → Set (Form TotalSet) := λ Γ => {Form.odd_noms φ | φ ∈ Γ} 
+  def Set.odd_noms : Set (Form TotalSet) → Set (Form TotalSet) := λ Γ => {Form.odd_noms φ | φ ∈ Γ}
 
   def nocc_bulk_property (l1 l2 : List (NOM TotalSet)) (φ : Form TotalSet) := ∀ {n : Fin l1.length} {i : NOM TotalSet}, (i = l1[n]) → (i ∉ φ.list_noms ∨ i ∈ l2.take n) ∧ i ∉ l1.take n
 
@@ -411,7 +303,7 @@ section NominalSubstitution
     | box _ ih    => exact ih
     | bind _ _ ih => exact ih
     | _        => simp [Form.list_noms]
-  
+
   theorem list_noms_nodup {φ : Form N} : φ.list_noms.Nodup := by
     induction φ <;> simp [Form.list_noms, List.nodup_dedup, *]
 

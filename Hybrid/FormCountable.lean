@@ -72,16 +72,16 @@ lemma split_prefix_suffix {a b : List (ℕ × ℕ × ℕ × ℕ)} (hyp : a.isPre
       | nil =>
           simp at hyp
       | cons hb tb =>
-          simp at hyp
+          simp [List.isPrefixOf] at hyp
           have ⟨h1, h2⟩ := hyp
           clear hyp
           have by_ih := ih h2
           match by_ih with
-          | ⟨c, hsuf, hsum⟩ => 
+          | ⟨c, hsuf, hsum⟩ =>
               clear by_ih ih
               exists c
               simp
-              exact ⟨⟨h1.symm, hsum⟩, is_suffix_cons hb hsuf⟩ 
+              exact ⟨⟨h1.symm, hsum⟩, is_suffix_cons hb hsuf⟩
 
 theorem prime_2_3 (n m : Nat) : 3^(n+1) ≠ 2^(m+1) := by admit
 
@@ -148,11 +148,11 @@ lemma squash_lemma_wlog (h : (pow2list a).length ≤ (pow2list n).length) : squa
   have by_l2 := split_prefix_suffix by_l1
   match by_l2 with
   | ⟨suf, hsuf⟩ =>
-      clear h by_l1 by_l2  
+      clear h by_l1 by_l2
       simp [hsuf] at hyp
       cases suf
       . simp at hyp hsuf
-        exact ⟨Eq.symm hsuf.left, hyp⟩ 
+        exact ⟨Eq.symm hsuf.left, hyp⟩
       . exfalso
         have is_pow_2 := suffix_pow2 hsuf.left
         cases b
@@ -174,12 +174,13 @@ lemma squash_lemma : squash a b = squash n m → (pow2list a = pow2list n ∧ po
       congr
       . rw [eq_symm]
       . congr <;> rw [eq_symm]
+    let Haux := @squash_lemma_wlog n a m b h
     exact squash_lemma_wlog h
 
   theorem squash_inj : squash a b = squash n m → (a = n ∧ b = m) := by
     intro hyp
     have ⟨a_n, b_m⟩ := squash_lemma hyp
-    exact ⟨pow2listinj a_n, pow3listinj b_m⟩  
+    exact ⟨pow2listinj a_n, pow3listinj b_m⟩
 
   #check Form.encode
 

@@ -63,14 +63,14 @@ section Definitions
   prefix:1000 "⊭" => ¬ Valid
 
   @[simp]
-  def Sat_Set (M : Model N) (s : M.W) (g : I M.W) (Γ : Set (Form N)) := ∀ (φ : Form N), (φ ∈ Γ) → ((M, s, g) ⊨ φ)  
+  def Sat_Set (M : Model N) (s : M.W) (g : I M.W) (Γ : Set (Form N)) := ∀ (φ : Form N), (φ ∈ Γ) → ((M, s, g) ⊨ φ)
 
   notation "(" M "," s "," g ")" "⊨" Γ => Sat_Set M s g Γ
   notation "(" M "," s "," g ")" "⊭" Γ => ¬ Sat_Set M s g Γ
 
-  --def Entails (Γ : set Form) (φ : Form) := ∀ M : Model, (M ⊨ Γ) → (M ⊨ φ) 
+  --def Entails (Γ : set Form) (φ : Form) := ∀ M : Model, (M ⊨ Γ) → (M ⊨ φ)
   @[simp]
-  def Entails (Γ : Set (Form N)) (φ : Form N) := ∀ (M : Model N) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ) 
+  def Entails (Γ : Set (Form N)) (φ : Form N) := ∀ (M : Model N) (s : M.W) (g : I M.W), ((M,s,g) ⊨ Γ) → ((M,s,g) ⊨ φ)
 
 
   infix:1000 "⊨" => Entails
@@ -114,7 +114,7 @@ section Theorems
       exact Eq.trans g1_is_g2 g2_is_g3
 
     theorem two_step_variant {g₁ g₂ g₃ : I W} {x y : SVAR} (g₁₂x : is_variant g₁ g₂ x) (g₂₃y : is_variant g₂ g₃ y) : ∀ v : SVAR, (v ≠ x ∧ v ≠ y) → g₁ v = g₃ v := by
-      intro v ⟨v_not_x, v_not_y⟩ 
+      intro v ⟨v_not_x, v_not_y⟩
       have one_eq_two   := g₁₂x v (Ne.symm v_not_x)
       have two_eq_three := g₂₃y v (Ne.symm v_not_y)
       exact Eq.trans one_eq_two two_eq_three
@@ -139,13 +139,13 @@ section Theorems
         . simp only [v_x, ite_true]
         . simp only [v_x, v_y, ite_false, ite_self]
 
-    theorem variant_mirror_property (g₁ g₂ g₃ : I W) {x y : SVAR} (g₁₂x : is_variant g₁ g₂ x) (g₂₃y : is_variant g₂ g₃ y) : 
+    theorem variant_mirror_property (g₁ g₂ g₃ : I W) {x y : SVAR} (g₁₂x : is_variant g₁ g₂ x) (g₂₃y : is_variant g₂ g₃ y) :
       ∃ g₂_mirror : I W, (is_variant g₁ g₂_mirror y ∧ is_variant g₂_mirror g₃ x) := by
       have two_step := two_step_variant g₁₂x g₂₃y
       conv at two_step =>
         intro v
         conv => lhs ; rw [conj_comm]
-      exact two_step_variant_rev g₁ g₃ two_step 
+      exact two_step_variant_rev g₁ g₃ two_step
 
   end Variants
 
@@ -173,11 +173,11 @@ section Theorems
     theorem SatConjunction (Γ : Set (Form N)) (L : List Γ) : Γ ⊨ conjunction Γ L := by
       intro M s g M_sat_Γ
       induction L with
-      | nil => 
+      | nil =>
           simp only [conjunction, Sat]
       | cons h t ih =>
           simp only [conjunction, and_sat, ih, and_true]
-          exact M_sat_Γ h h.prop 
+          exact M_sat_Γ h h.prop
 
     theorem SetEntailment (Γ : Set (Form N)) : (∃ L, ⊨ (conjunction Γ L ⟶ ψ)) → Γ ⊨ ψ := by
       intro h
@@ -195,9 +195,10 @@ section Theorems
     apply Iff.intro
     . intro h
       rw [Sat_Set] at h
-      apply And.intro <;>
+      apply And.intro
+      . intro χ mem; apply h; simp [mem]
       . intro χ mem; apply h; simp at mem; simp [mem]
-    . intro ⟨hl, hr⟩ 
+    . intro ⟨hl, hr⟩
       intro χ mem; simp at mem
       apply Or.elim mem <;> {
         intros; first | {apply hl; assumption} | {apply hr; assumption}
@@ -206,7 +207,6 @@ section Theorems
   theorem SemanticDeduction {Γ : Set (Form N)} : (Γ ⊨ (φ ⟶ ψ)) ↔ ((Γ ∪ {φ}) ⊨ ψ) := by
     apply Iff.intro <;> {
       intro h M s g sat_set
-      simp only [Sat]
       try (intro sat_φ;
             have sat_φ : (M,s,g) ⊨ {φ} := by simp only [Sat_Set, Set.mem_singleton_iff, forall_eq,
               sat_φ])
@@ -254,8 +254,8 @@ theorem sat_odd_noms {φ : Form TotalSet} : ((M,s,g) ⊨ φ) ↔ ((M.odd_noms,s,
         exact h1 g' h2
       . intro h1 g' h2
         rw [@ih s g']
-        exact h1 g' h2 
-  | _ => simp [Form.odd_noms, Model.odd_noms] 
+        exact h1 g' h2
+  | _ => simp [Form.odd_noms, Model.odd_noms]
 
 theorem sat_odd_noms' {φ : Form TotalSet} : ((M,s,g) ⊨ φ.odd_noms) ↔ ((M.odd_noms_inv,s,g) ⊨ φ) := by
 --  conv => rhs; rw [sat_odd_noms]
@@ -281,7 +281,7 @@ theorem sat_odd_noms' {φ : Form TotalSet} : ((M,s,g) ⊨ φ.odd_noms) ↔ ((M.o
         exact h1 g' h2
       . intro h1 g' h2
         rw [@ih s g']
-        exact h1 g' h2 
+        exact h1 g' h2
   | _ => simp [Form.odd_noms, Model.odd_noms, Model.odd_noms_inv]
 
 /-

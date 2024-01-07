@@ -1,6 +1,8 @@
 import Std.Logic
 open Classical
 
+theorem test (a b : Nat) : a = b → a + 1 = b + 1 := by intro h; simp [h]
+
 def TypeIff (a : Type u) (b : Type v) := Prod (a → b) (b → a)
 def TypeIff.intro (a : Type u) (b : Type v) : (a → b) → (b → a) → (TypeIff a b) := by
   apply Prod.mk
@@ -143,21 +145,21 @@ theorem negated_existential {α : Type u} {p : α → Prop} : (¬ ∃ x, p x) �
     Iff.intro
     (fun h1 : ¬ ∃ x, p x =>
       (fun a : α =>
-        fun hpa: p a => show False from h1 ⟨a, hpa⟩ 
+        fun hpa: p a => show False from h1 ⟨a, hpa⟩
       )
     )
     (fun h2 : ∀ x, ¬ p x =>
-      (fun hex : ∃ x, p x => 
+      (fun hex : ∃ x, p x =>
         match hex with
         | ⟨w, hw⟩ => show False from (h2 w) hw
       )
     )
 
 @[simp]
-theorem conj_comm : p ∧ q ↔ q ∧ p := 
+theorem conj_comm : p ∧ q ↔ q ∧ p :=
   Iff.intro
     (fun hpq : p ∧ q =>
-      ⟨hpq.right, hpq.left⟩ 
+      ⟨hpq.right, hpq.left⟩
     )
     (fun hqp : q ∧ p =>
       ⟨hqp.right, hqp.left⟩

@@ -11,18 +11,6 @@ def Form.replace_bound : Form N → SVAR → Form N
   | (φ ⟶ ψ), x => (φ.replace_bound x) ⟶ (ψ.replace_bound x)
   | (□φ), x     => □ (φ.replace_bound x)
   | φ, _        => φ
-/-
-termination_by _ φ _ _ => φ.depth
-decreasing_by
-  simp_wf
-  simp [subst_depth', depth]
-  <;> (
-      apply Nat.lt_of_lt_of_le
-      apply Nat.lt_add_of_pos_right (show 0 < 1 by simp)
-      rw [Nat.add_comm]
-      apply Nat.le_add_right
-  )
--/
 
 theorem replace_neg : (∼φ).replace_bound x = ∼(φ.replace_bound x) := by
   admit
@@ -45,9 +33,9 @@ theorem substable_after_replace (φ : Form N) : is_substable (φ.replace_bound y
         . simp
           apply And.intro
           . have : (φ.replace_bound y).new_var + y.letter ≥ y := by simp [SVAR.le, SVAR.add]
-            
+
             admit
-          . 
+          .
             admit
       . admit
   | impl φ ψ ih1 ih2 => admit

@@ -47,7 +47,7 @@ theorem rename_bound_ex (h1 : occurs y φ = false) (h2 : is_substable φ y x) : 
       apply iff_elim_l
     . apply tautology
       apply iff_not
-  . 
+  .
     apply rename_bound
     repeat { simp [occurs, is_substable]; assumption }
 
@@ -64,7 +64,7 @@ theorem Deduction {Γ : Set (Form N)} : Γ ⊢ (ψ ⟶ φ) iff (Γ ∪ {ψ}) ⊢
         have pfmem : ψ ∈ Γ ∪ {ψ} := by simp
         let L' : List ↑(Γ ∪ {ψ}) := ⟨ψ, pfmem⟩ :: list_convert L
         rw [conj_incl] at l2
-        exact ⟨L', l2⟩ 
+        exact ⟨L', l2⟩
   . intro h
     match h with
     | ⟨L', hpf⟩ =>
@@ -78,7 +78,7 @@ theorem Deduction {Γ : Set (Form N)} : Γ ⊢ (ψ ⟶ φ) iff (Γ ∪ {ψ}) ⊢
         have not_elem_L' := eq_false_of_ne_true (@filter'_filters N Γ ψ L')
         let L : List Γ := list_convert_rev (filter' L' ψ) not_elem_L'
         rw [conj_incl_rev (filter' L' ψ) not_elem_L'] at l4
-        exact ⟨L, l4⟩ 
+        exact ⟨L, l4⟩
       . have elem : elem' L' ψ = false := by simp only [elem]
         let L : List Γ := list_convert_rev L' elem
         rw [conj_incl_rev L' elem] at l2
@@ -202,13 +202,13 @@ theorem Γ_conj_intro {φ : Form N} (h1 : Γ ⊢ φ) (h2 : Γ ⊢ ψ) : Γ ⊢ (
 theorem Γ_conj_elim_l {φ : Form N} (h : Γ ⊢ (φ ⋀ ψ)) : Γ ⊢ φ := by
   have l1 := tautology (@conj_elim_l N φ ψ)
   have l2 := Γ_theorem l1 Γ
-  have l3 := Γ_mp l2 h 
+  have l3 := Γ_mp l2 h
   exact l3
 
 theorem Γ_conj_elim_r {φ : Form N} (h : Γ ⊢ (φ ⋀ ψ)) : Γ ⊢ ψ := by
   have l1 := tautology (@conj_elim_r N φ ψ)
   have l2 := Γ_theorem l1 Γ
-  have l3 := Γ_mp l2 h 
+  have l3 := Γ_mp l2 h
   exact l3
 
 theorem Γ_disj_intro_l {φ : Form N} (h : Γ ⊢ φ) : Γ ⊢ (φ ⋁ ψ) := by
@@ -269,7 +269,7 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
     intro pf
     apply general x
     induction pf generalizing x with
-    | @tautology φ ht      =>  
+    | @tautology φ ht      =>
         apply tautology
         simp [Tautology] at ht ⊢
         intro e
@@ -286,7 +286,7 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
           exact general v this
         . simp [hc] at h
           exact general v (ih h)
-    | @necess   ψ _ ih     =>  
+    | @necess   ψ _ ih     =>
         simp only [nom_subst_svar, occurs] at h ⊢
         apply necess; apply ih; assumption
     | @mp φ ψ _ _ ih1 ih2  =>
@@ -297,7 +297,7 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
         -- generalize, get  all y, ψ[y // i]
         -- then apply axiom Q2 and get:
         --                   (ψ[y // i])[x // y]
-        -- this should bring you to:       
+        -- this should bring you to:
         --                   ψ[x // i]
         let y := (φ ⟶ ψ).new_var
         have ih1_cond : y ≥ (φ⟶ψ).new_var := Nat.le.refl
@@ -335,7 +335,7 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
         simp [nom_subst_svar]
         have f3 := diffsvar (new_var_geq2 (new_var_geq1 h).left).left
         by_cases ji : j = i
-        . rw [ji] at h ⊢ 
+        . rw [ji] at h ⊢
           have f2 := (new_var_geq2 (new_var_geq1 h).left).right
           have f1 := @new_var_subst'' N φ x v f2
           have := new_var_subst' i f1 f2 f3
@@ -346,7 +346,7 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
           exact ax_q2_nom (φ[x//i]) v j
     | @ax_name    v        =>
         exact ax_name v
-    | @ax_nom   φ v m n    =>  
+    | @ax_nom   φ v m n    =>
         simp only [nom_subst_svar, nec_subst_nom, pos_subst_nom]
         apply ax_nom
     | @ax_brcn  φ v        =>
@@ -363,65 +363,6 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
     apply TypeIff.intro
     . apply generalize_constants; assumption
     . apply generalize_constants_rev; assumption
-
-  theorem pf_extended {φ : Form N} : ⊢ φ iff ⊢ φ.total := by
-    apply TypeIff.intro
-    . intro pf
-      induction pf with
-      | tautology =>
-          apply Proof.tautology
-          admit
-      | ax_k =>
-          apply Proof.ax_k
-      | ax_q1 =>
-          apply Proof.ax_q1
-          admit
-      | ax_q2_svar =>
-          admit
-      | ax_q2_nom =>
-          admit
-      | ax_name =>
-          apply Proof.ax_name
-      | ax_nom  =>
-          admit
-      | ax_brcn =>
-          apply Proof.ax_brcn
-      | mp   =>
-          apply Proof.mp
-          repeat assumption
-      | general =>
-          apply Proof.general
-          assumption
-      | necess  =>
-          apply Proof.necess
-          assumption
-    . intro pf
-      generalize hc : φ.total = φ_t at *
-      induction pf with
-      | tautology =>
-          apply Proof.tautology
-          admit
-      | @ax_k ψ_t χ_t =>
-          rw [(total_ax_k hc).choose_spec.choose_spec]
-          apply ax_k
-      | ax_q1 =>
-          admit
-      | ax_q2_svar =>
-          admit
-      | ax_q2_nom =>
-          admit
-      | ax_name =>
-          admit
-      | ax_nom  =>
-          admit
-      | ax_brcn =>
-          admit
-      | mp   =>
-          admit
-      | general =>
-          admit
-      | necess  =>
-          admit
 
   theorem rename_constants (j i : NOM N) (h : nom_occurs j φ = false) : ⊢ φ iff ⊢ (φ[j // i]) := by
     apply TypeIff.intro
@@ -460,8 +401,8 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
                 apply @nocc_bulk TotalSet h_new [] []
                 simp
                 unfold nocc_bulk_property at h
-                let n: Fin (List.length (h_new :: t_new)) := ⟨0, by simp⟩ 
-                have : h_new = (h_new :: t_new)[n] := by simp
+                let n: Fin (List.length (h_new :: t_new)) := ⟨0, by simp⟩
+                have : h_new = (h_new :: t_new)[n] := by get_elem_tactic
                 have := @h n h_new this
                 simp [show ↑n = 0 by simp] at this
                 simp
@@ -485,7 +426,7 @@ theorem generalize_constants {φ : Form N} {x : SVAR} (i : NOM N) (h : x ≥ φ.
     . intro ⟨L', h'⟩
       have h' := pf_odd_noms.mpr (odd_impl.symm ▸ (odd_conj_rev Γ L').symm ▸ h')
       exists L'.odd_to
-  
+
   theorem odd_noms_set_cons (Γ : Set (Form TotalSet)) : consistent Γ ↔ consistent Γ.odd_noms := by
     unfold consistent
     have : Form.bttm = Form.bttm.odd_noms := by simp [Form.odd_noms, Form.odd_list_noms, Form.bulk_subst]
@@ -596,7 +537,7 @@ lemma b361 {φ : Form N} : ⊢ ((φ ⟶ ex x, ψ) ⟶ ex x, (φ ⟶ ψ)) := by
     have l3 := Γ_mp l2 l1
     have l4 := Γ_theorem (@ax_q2_svar_instance x N (∼(φ⟶ψ))) Γ
     have l5 := Γ_mp l4 l3
-    have l6 := Γ_theorem (tautology (taut_iff_mp (@imp_neg N φ ψ))) Γ 
+    have l6 := Γ_theorem (tautology (taut_iff_mp (@imp_neg N φ ψ))) Γ
     have l7 := Γ_mp l6 l5
     have l8 := Γ_conj_elim_l l7
     have l9 := Γ_conj_elim_r l7
@@ -670,14 +611,14 @@ lemma b363  {φ : Form N} : ⊢ ((all x, (φ ⟶ ψ)) ⟶ ((all x, φ) ⟶ (all 
   have l1 : Γ ⊢ (all x, (φ ⟶ ψ)) := by apply Γ_premise; simp
   have l2 : Γ⊢(φ⟶ψ) := by
     apply Γ_mp
-    apply Γ_theorem  
+    apply Γ_theorem
     apply ax_q2_svar_instance
     exact x
     exact l1
   have l3 : Γ⊢(all x, φ) := by apply Γ_premise; simp
   have l4 : Γ⊢φ := by
     apply Γ_mp
-    apply Γ_theorem  
+    apply Γ_theorem
     apply ax_q2_svar_instance
     exact x
     exact l3
@@ -777,8 +718,8 @@ lemma ax_brcn_contrap {φ : Form N} : ⊢ ((◇ ex x, φ) ⟶ (ex x, ◇ φ)) :=
   . apply Γ_empty.mp; apply Deduction.mpr
     simp only [Set.union_singleton, insert_emptyc_eq]
     let Γ : Set (Form N) := {all x, ∼∼(□∼φ)}
-    have l1 : Γ ⊢ (all x, ∼∼(□∼φ)) := by apply Γ_premise; simp 
-    have l2 := Γ_theorem (mp (tautology iff_elim_r) (@dn_all x N (□∼φ))) Γ 
+    have l1 : Γ ⊢ (all x, ∼∼(□∼φ)) := by apply Γ_premise; simp
+    have l2 := Γ_theorem (mp (tautology iff_elim_r) (@dn_all x N (□∼φ))) Γ
     have l3 := Γ_mp l2 l1
     have l4 := Γ_theorem (@ax_brcn N (∼φ) x) Γ
     have l5 := Γ_mp l4 l3

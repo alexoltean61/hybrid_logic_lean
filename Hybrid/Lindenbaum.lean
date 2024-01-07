@@ -4,7 +4,7 @@ import Hybrid.FormCountable
 
 open Classical
 
--- First, we define how to obtain Γᵢ₊₁ from Γᵢ, given a formula φ: 
+-- First, we define how to obtain Γᵢ₊₁ from Γᵢ, given a formula φ:
 def lindenbaum_next (Γ : Set (Form N)) (φ : Form N) : Set (Form N) :=
   if consistent (Γ ∪ {φ}) then
     match φ with
@@ -22,13 +22,13 @@ def lindenbaum_next (Γ : Set (Form N)) (φ : Form N) : Set (Form N) :=
 --    Γ₀ = Γ .
 -- However, in Lean it's much tidier to enumerate from 0 (φ₀, φ₁, ...), so
 --    Γ₀ = Γ ∪ {φ₀} if it is consistent and Γ₀ = Γ otherwise.
-def lindenbaum_family (enum : Nat → Form N) (Γ : Set (Form N)) : Nat → Set (Form N) 
+def lindenbaum_family (enum : Nat → Form N) (Γ : Set (Form N)) : Nat → Set (Form N)
 | .zero   => lindenbaum_next Γ (enum 0)
 | .succ n =>
     let prev_set := lindenbaum_family enum Γ n
     lindenbaum_next prev_set (enum (n+1))
 
-notation Γ "(" i "," e ")" => lindenbaum_family e Γ i    
+notation Γ "(" i "," e ")" => lindenbaum_family e Γ i
 
 def LindenbaumMCS (enum : Nat → Form N) (Γ : Set (Form N)) (_ : consistent Γ) : Set (Form N) :=
     {φ | ∃ i : Nat, φ ∈ Γ (i, enum)}
@@ -43,7 +43,7 @@ lemma all_sets_in_family_tollens {enum : ℕ → Form N} {Γ : Set (Form N)} {c 
   intro h
   let ⟨i, hi⟩ := h
   rw [not_not] at hi
-  exact all_sets_in_family i hi 
+  exact all_sets_in_family i hi
 
 -- Lemma: If Γ is consistent, then for all φ, lindenbaum_next Γ φ is consistent
 lemma consistent_lindenbaum_next (Γ : Set (Form N)) (hc : consistent Γ) (φ : Form N) : consistent (lindenbaum_next Γ φ) := by
@@ -89,7 +89,7 @@ lemma consistent_lindenbaum_next (Γ : Set (Form N)) (hc : consistent Γ) (φ : 
           rw [subst_neg]
           apply new_var_subst'' (new_var_geq1 y_ge).right
         have := Proof.Γ_theorem this (Γ ∪ {ex x, ψ})
-        have habs := Proof.Γ_mp this habs 
+        have habs := Proof.Γ_mp this habs
         have : (Γ ∪ {ex x, ψ}) ⊢ (ex x, ψ) := by apply Proof.Γ_premise; simp
         have := Proof.Γ_mp this habs
         exact h this
@@ -286,7 +286,7 @@ theorem RegularLindenbaumLemma : ∀ Γ : Set (Form N), consistent Γ → ∃ Γ
   let Γ' := LindenbaumMCS enum Γ cons
   have enum_inv : enum = f.invFun := rfl
   exists Γ'
-  apply And.intro 
+  apply And.intro
   . -- Γ is included in Γ'
     let Γ₀ := Γ (0, enum)
     have Γ_in_Γ₀ : Γ ⊆ Γ₀ := Γ_in_family

@@ -10,7 +10,7 @@ def conjunction' (L : List (Form N)) : Form N :=
     | h :: t => h ⋀ conjunction' t
 
 def has_wit_conj (Γ : Set (Form N)) : Form N → Form N → Prop
-  | (ex x, ψ), φ => ∃ i : NOM N, ◇(((ex x, ψ) ⟶ ψ[i//x]) ⋀ φ) ∈ Γ 
+  | (ex x, ψ), φ => ∃ i : NOM N, ◇(((ex x, ψ) ⟶ ψ[i//x]) ⋀ φ) ∈ Γ
   | _, _         => True
 
 lemma l313 {τ χ : Form N} (h1 : is_substable χ y x) (h2 : occurs y τ = false) (h3 : occurs y χ = false) :
@@ -63,16 +63,16 @@ def witness_conditionals (enum : ℕ → Form N) (n : ℕ) {Δ : Set (Form N)} (
            | ex x, ψ_n  =>
               let ⟨i_n, curr_mem⟩ := this
               exact ⟨((ex x, ψ_n) ⟶ ψ_n[i_n//x]) :: prev_l, by simp, by rw [conjunction']; exact curr_mem; exact prev_nnil⟩
-           | _        => exact ⟨prev_l, prev_nnil, prev_mem⟩ 
+           | _        => exact ⟨prev_l, prev_nnil, prev_mem⟩
 
 def succesor_set' (enum : ℕ → Form N) {Δ : Set (Form N)} (mcs : MCS Δ) (wit : witnessed Δ) (mem : ◇φ ∈ Δ) : Set (Form N) :=
   {ψ | □ψ ∈ Δ} ∪ {φ | ∃ n : ℕ, φ ∈ (witness_conditionals enum n mcs wit mem).choose}
 
-  
+
 
 /-
 def Set.has_wit_of (Γ : Set (Form N)) : Form → Prop
-  | ex x, φ => ∃ (i : NOM), (ex x, φ ⟶ φ[i//x]) ∈ Γ 
+  | ex x, φ => ∃ (i : NOM), (ex x, φ ⟶ φ[i//x]) ∈ Γ
   | _       => True
 
 def Set.list_wit {Γ : Set (Form N)} (enum : ℕ → Form N) (n : ℕ) (h : ∀ i : ℕ, i < n → Γ.has_wit_of (enum i)) : List (Form N) :=

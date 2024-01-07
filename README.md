@@ -1,3 +1,5 @@
+A description of both the mathematical and the Lean details of this project can be found in my BA's thesis [here](https://raw.githubusercontent.com/alexoltean61/alexoltean61.github.io/main/hybrid.pdf).
+
 Code was written following Blackburn 1998, present in this repository as **blackburn1998.pdf**.
 
 **Table of Contents**

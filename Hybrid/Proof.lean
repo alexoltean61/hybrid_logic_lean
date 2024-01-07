@@ -8,7 +8,7 @@ inductive Proof : Form N → Type where
   | general {φ : Form N} (v : SVAR):
         Proof φ → Proof (all v, φ)
 
-  -- if φ is a theorem, □ φ is a theorem 
+  -- if φ is a theorem, □ φ is a theorem
   | necess {φ : Form N}:
         Proof φ → Proof (□ φ)
 
@@ -50,6 +50,16 @@ def Proof.size : Proof φ → ℕ
   | .mp pf1 pf2   => pf1.size + pf2.size + 1
   | _ => 1
 
+def Proof.contains {φ : Form N} : Proof φ → Form N → Bool :=
+  λ pf ψ => φ == ψ ||
+    match pf with
+    | .general _ pf' => pf'.contains φ
+    | .necess pf'    => pf'.contains φ
+    | .mp pf1 pf2    => pf1.contains φ || pf2.contains φ
+    | _ => false
+
+def Proof.fresh_var : Proof φ → SVAR → Prop := λ pf x => ∀ ψ, pf.contains ψ → x ≥ ψ.new_var
+
 def SyntacticConsequence (Γ : Set (Form N)) (φ : Form N) := Σ L, Proof ((conjunction Γ L) ⟶ φ)
 
 prefix:500 "⊢"  => Proof
@@ -64,8 +74,8 @@ def consistent (Γ : Set (Form N)) := ∀ (_ : SyntacticConsequence Γ ⊥), Fal
 def MCS (Γ : Set (Form N)) := consistent Γ ∧ (∀ {φ : Form N}, (¬φ ∈ Γ) → ¬consistent (Γ ∪ {φ}))
 
 def witnessed (Γ : Set (Form N)) : Prop := ∀ {φ : Form N},
-  φ ∈ Γ → 
-    match φ with 
+  φ ∈ Γ →
+    match φ with
 --      | ex x, ψ => ∃ i : NOM, ((ex x, ψ) ⟶ ψ[i // x]) ∈ Γ
-      | ex x, ψ => ∃ i : NOM N, ψ[i // x] ∈ Γ 
+      | ex x, ψ => ∃ i : NOM N, ψ[i // x] ∈ Γ
       | _   => φ ∈ Γ

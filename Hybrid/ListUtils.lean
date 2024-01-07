@@ -66,7 +66,7 @@ theorem filter'_doesnt_filter {Γ : Set (Form N)} {L : List Γ} (hyp : ¬elem' L
                    . simp [elem', c] at hyp
 
 -- Trivial fact, ugly implementation (but it works!):
---    Let Γ and Δ be two sets of formulas s.t. Γ ⊆ Δ. 
+--    Let Γ and Δ be two sets of formulas s.t. Γ ⊆ Δ.
 --    Then, any list L of formulas taken from Γ can be
 --      converted to a list L' of formulas from Δ
 --      s.t. L and L' have the same elements.
@@ -121,7 +121,6 @@ def list_convert_rev {Γ : Set (Form N)} {ψ : Form N} (L : List ↑(Γ ∪ {ψ}
   | h ::t  => dite (ψ = ↑h)
                 (λ _ => list_convert_rev t (help2 hyp))
                 (λ neq => by
-                    simp at neq
                     have prop := help h.prop (Ne.symm neq)
                     exact ⟨h.val, prop⟩ :: (list_convert_rev t (help2 hyp))
                 )
@@ -158,7 +157,7 @@ theorem conj_incl_linden {Γ Δ : Set (Form N)} (L : List Γ) (hyp : {↑φ | φ
         intro x x_mem
         simp only [Set.mem_setOf_eq] at x_mem
         simp only [List.mem_cons] at hyp
-        let ⟨φ, a, b⟩ := x_mem 
+        let ⟨φ, a, b⟩ := x_mem
         have : ∃ φ, (φ = h ∨ φ ∈ t) ∧ ↑φ = x := by
           exists φ
           apply And.intro
@@ -201,7 +200,7 @@ theorem conj_helper {e : Eval N} {Γ : Set (Form N)} {L : List Γ} (hyp : elem' 
           simp only [ih, phi_in_t]
         . simp only [filter'_doesnt_filter, phi_in_t, e_conj, and_comm]
       . simp [elem', eq] at hyp
-        simp only [hyp, e_conj, conj_comm, forall_true_left] at ih 
+        simp only [hyp, e_conj, conj_comm, forall_true_left] at ih
         rw [and_comm] at ih
         simp only [filter', eq, conjunction, e_conj, and_assoc, ih]
 
